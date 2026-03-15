@@ -1,0 +1,17 @@
+date,best_score_pct,best_model,scaffold_type,scaffold_complexity_1to5,primary_source,scaffold_complexity_description
+2024-03-01,4.0,Claude-3 Opus,Simple prompt,1,Anthropic blog / SWE-bench original paper,Single-turn prompt only
+2024-07-01,12.5,GPT-4o,SWE-Agent v1,2,SWE-bench official leaderboard,"Simple agentic loop, basic tools"
+2024-10-01,33.0,Claude-3.5 Sonnet (old),SWE-Agent v2,2,SWE-bench official leaderboard,"Simple agentic loop, basic tools"
+2024-10-22,49.0,Claude-3.5 Sonnet (new),Custom agentic loop,3,Anthropic engineering blog,"Multi-step agentic loop, optimised prompts"
+2025-01-15,50.8,o3 (medium),Custom agentic loop,3,OpenAI / SWE-bench leaderboard,"Multi-step agentic loop, optimised prompts"
+2025-02-01,53.0,Claude-3.7 Sonnet,mini-SWE-agent,2,Epoch AI / Anthropic,"Simple agentic loop, basic tools"
+2025-04-01,71.7,o3 (high),Optimised loop,3,OpenAI / Epoch AI,"Multi-step agentic loop, optimised prompts"
+2025-05-01,65.0,Claude Sonnet 4,Claude Code,4,Anthropic / HAL leaderboard,Full agentic scaffold (Claude Code / Codex / Confucius)
+2025-08-01,70.0,GPT-5,Codex scaffold,4,OpenAI / vals.ai,Full agentic scaffold (Claude Code / Codex / Confucius)
+2025-09-01,70.0,Claude Sonnet 4.5,Claude Code,4,Anthropic / HAL leaderboard,Full agentic scaffold (Claude Code / Codex / Confucius)
+2025-11-01,74.6,Claude Opus 4.5,Claude Code,4,Anthropic / HAL leaderboard,Full agentic scaffold (Claude Code / Codex / Confucius)
+2025-11-15,74.6,Qwen3-32B,Confucius scaffold,4,arXiv:2512.10398,Full agentic scaffold (Claude Code / Codex / Confucius)
+2025-11-20,79.2,Claude Opus 4.5+,Claude Code+,5,HAL leaderboard / Anthropic,Full agentic scaffold with extended context and advanced orchestration
+2026-02-01,76.2,Gemini 3 Flash,mini-SWE-agent,2,vals.ai / mini-SWE-agent,"Simple agentic loop, basic tools"
+2026-02-15,79.2,Claude Opus 4.6,Claude Code,5,vals.ai,Full agentic scaffold with extended context and advanced orchestration
+2026-03-13,79.2,Claude Opus 4.6,Claude Code,5,vals.ai (retrieved this date),Full agentic scaffold with extended context and advanced orchestration

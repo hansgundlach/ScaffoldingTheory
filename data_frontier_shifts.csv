@@ -1,0 +1,20 @@
+model,scaffold,accuracy_pct,cost_per_task_usd,source,notes
+GPT-4o,Single turn,12.0,0.024,Estimated,Approximate — single-turn estimated as ~25% of agentic cost
+GPT-4o,SWE-Agent,28.0,0.08,SWE-bench leaderboard,
+GPT-4o,OpenHands,33.0,0.2,SWE-bench leaderboard,
+GPT-4o,Epoch AI v2 scaffold,40.0,0.28,Epoch AI,
+Claude-3.5 Sonnet,Single turn,15.0,0.045,Estimated,Approximate — single-turn estimated as ~25% of agentic cost
+Claude-3.5 Sonnet,SWE-Agent v2,33.0,0.12,SWE-bench leaderboard,
+Claude-3.5 Sonnet,Anthropic custom loop,49.0,0.22,Anthropic blog,
+Claude-3.5 Sonnet,Claude Code,53.0,0.28,Epoch AI,
+Claude Sonnet 4,Single turn,20.0,0.06,Estimated,Approximate — single-turn estimated as ~25% of agentic cost
+Claude Sonnet 4,mini-SWE-agent,44.0,0.2,SWE-bench leaderboard,
+Claude Sonnet 4,Claude Code,65.0,1.244,vals.ai / Anthropic,
+Claude Opus 4.5,Single turn,28.0,0.105,Estimated,Approximate — single-turn estimated as ~25% of agentic cost
+Claude Opus 4.5,mini-SWE-agent,63.0,0.5,HAL leaderboard,
+Claude Opus 4.5,Claude Code,74.6,1.695,vals.ai,
+Claude Opus 4.5,Claude Code+,79.2,1.688,vals.ai,
+Qwen3-32B,Single turn,18.0,0.018,Estimated,Approximate — single-turn estimated as ~25% of agentic cost
+Qwen3-32B,Agentless,38.0,0.06,SWE-Effi paper,
+Qwen3-32B,OpenHands,34.0,0.18,SWE-Effi paper,
+Qwen3-32B,Confucius scaffold,74.6,0.17,arXiv:2512.10398,

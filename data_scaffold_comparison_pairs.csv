@@ -1,0 +1,9 @@
+model,scaffold_A,score_A_pct,scaffold_B,score_B_pct,lift,source,source_url
+Claude-3.5 Sonnet (new),Simple agentic loop (Anthropic),49.0,Early RAG scaffold,33.0,+16pp,Anthropic engineering blog,https://www.anthropic.com/engineering/swe-bench-sonnet
+Claude-3.5 Sonnet,CodeR scaffold,45.0,Early RAG scaffold,2.7,+42pp,OpenAI SWE-bench Verified paper,https://openai.com/index/introducing-swe-bench-verified/
+Claude Opus 4.5,Claude Code scaffold,85.0,CORE-Agent scaffold,60.0,+25pp,HAL paper / Princeton (ICLR 2026),https://arxiv.org/abs/2510.11977
+Claude-3.7 Sonnet,Epoch AI v2 scaffold,62.0,Epoch AI v1 scaffold,44.0,+18pp,Epoch AI changelog Feb 2026,https://epoch.ai/benchmarks/swe-bench-verified
+GPT-4o,Epoch AI v2 scaffold,40.0,Simple shell,12.0,+28pp,Epoch AI,https://epoch.ai/benchmarks/swe-bench-verified
+Qwen3-32B,Confucius scaffold,74.6,mini-SWE-agent,64.0,+10pp,Confucius Code Agent paper,https://arxiv.org/abs/2512.10398
+Qwen3-32B,Agentless,38.0,SWE-Agent,30.0,+8pp,SWE-Effi paper,https://arxiv.org/abs/2509.09853
+GPT-4o-mini,Agentless,22.0,SWE-Agent,14.0,+8pp,SWE-Effi paper,https://arxiv.org/abs/2509.09853

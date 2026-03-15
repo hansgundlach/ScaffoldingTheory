@@ -1,0 +1,28 @@
+﻿Rank,Scaffold,Primary Model,Verified,Accuracy,Cost (USD),Runs,Traces
+,,,,,,,
+1,TAU-bench Tool Calling Pareto optimal,o4-mini High (April 2025),✓,56.00%,$11.36 ,1,Download 
+2,HAL Generalist Agent,Claude-3.7 Sonnet (February 2025),✓,56.00%,$42.11 ,1,Download 
+3,TAU-bench Tool Calling,o3 Medium (April 2025),✓,54.00%,$14.56 ,1,Download 
+4,HAL Generalist Agent,Claude Opus 4.1 (August 2025),✓,54.00%,$180.49 ,1,Download 
+5,TAU-bench Tool Calling,Claude-3.7 Sonnet High (February 2025),✓,52.00%,$31.94 ,1,Download 
+6,TAU-bench Tool Calling,Claude Opus 4.1 High (August 2025),✓,52.00%,$149.98 ,1,Download 
+7,TAU-bench Tool Calling,Claude Opus 4.1 (August 2025),✓,50.00%,$69.78 ,1,Download 
+8,TAU-bench Tool Calling,GPT-5 Medium (August 2025),✓,48.00%,$23.83 ,1,Download 
+9,TAU-bench Tool Calling Pareto optimal,DeepSeek V3 (March 2025),✓,44.00%,$5.43 ,1,Download 
+10,TAU-bench Tool Calling,Claude-3.7 Sonnet (February 2025),✓,44.00%,$15.45 ,1,Download 
+11,HAL Generalist Agent,Claude-3.7 Sonnet High (February 2025),✓,44.00%,$34.58 ,1,Download 
+12,HAL Generalist Agent,Claude Opus 4 (May 2025),✓,44.00%,$150.15 ,1,Download 
+13,HAL Generalist Agent,Claude Opus 4 High (May 2025),✓,44.00%,$150.29 ,1,Download 
+14,TAU-bench Tool Calling,o4-mini Low (April 2025),✓,36.00%,$7.14 ,1,Download 
+15,TAU-bench Tool Calling,GPT-4.1 (April 2025),✓,36.00%,$8.18 ,1,Download 
+16,TAU-bench Tool Calling,DeepSeek R1 (January 2025),✓,36.00%,$13.30 ,1,Download 
+17,HAL Generalist Agent,Claude Opus 4.1 High (August 2025),✓,32.00%,$140.28 ,1,Download 
+18,HAL Generalist Agent,GPT-5 Medium (August 2025),✓,30.00%,$52.78 ,1,Download 
+19,TAU-bench Tool Calling Pareto optimal,Gemini 2.0 Flash High (February 2025),✓,28.00%,$0.31 ,1,Download 
+20,HAL Generalist Agent,Gemini 2.0 Flash (February 2025),✓,22.00%,$2.00 ,1,Download 
+21,HAL Generalist Agent,o4-mini Low (April 2025),✓,22.00%,$20.16 ,1,Download 
+22,HAL Generalist Agent,o3 Medium (April 2025),✓,20.00%,$45.03 ,1,Download 
+23,HAL Generalist Agent,DeepSeek V3 (March 2025),✓,18.00%,$10.73 ,1,Download 
+24,HAL Generalist Agent,o4-mini High (April 2025),✓,18.00%,$20.57 ,1,Download 
+25,HAL Generalist Agent,GPT-4.1 (April 2025),✓,16.00%,$17.85 ,1,Download 
+26,HAL Generalist Agent,DeepSeek R1 (January 2025),✓,10.00%,$30.18 ,1,Download 
