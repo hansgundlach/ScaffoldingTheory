@@ -98,3 +98,15 @@ Epoch GPQA-Diamond model IDs for the GPQA vs Agentic performance plots.
 - 20 matched points out of 23 total HAL entries
 - 2 scaffolds: HAL Generalist Agent, SAB Self-Debug
 - Unmatched HAL models: DeepSeek V3 (March 2025), Gemini 2.0 Flash (February 2025)
+
+### SciCode
+
+- 22 matched points out of 25 total HAL entries
+- 3 scaffolds: HAL Generalist Agent, Scicode Tool Calling Agent, Scicode Zero Shot Agent
+- Unmatched HAL models: DeepSeek V3 (March 2025), Gemini 2.0 Flash (February 2025)
+
+### Online Mind2Web
+
+- 19 matched points out of 22 total HAL entries
+- 2 scaffolds: Browser-Use, SeeAct
+- Unmatched HAL models: DeepSeek V3 (March 2025), Gemini 2.0 Flash (February 2025)

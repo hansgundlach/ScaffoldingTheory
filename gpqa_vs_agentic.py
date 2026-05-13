@@ -212,6 +212,8 @@ BENCHMARKS = [
     ("tau_bench_airline.csv", "TAU-bench Airline", "Primary Model"),
     ("usaco.csv", "USACO", "Primary Model"),
     ("sci_agent_bench.csv", "SciAgentBench", "Models"),
+    ("scicode.csv", "SciCode", "Primary Model"),
+    ("online_mine_2_web.csv", "Online Mind2Web", "Primary Model"),
 ]
 
 # Collect all unique HAL model names across all benchmarks

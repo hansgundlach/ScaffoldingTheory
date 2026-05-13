@@ -92,12 +92,14 @@ BENCHMARKS = [
     ("tau_bench_airline.csv", "TAU-bench Airline", "Primary Model"),
     ("usaco.csv", "USACO", "Primary Model"),
     ("sci_agent_bench.csv", "SciAgentBench", "Models"),
+    ("scicode.csv", "SciCode", "Primary Model"),
+    ("online_mine_2_web.csv", "Online Mind2Web", "Primary Model"),
 ]
 
 LINESTYLES = ["-", "--", "-.", ":"]
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
-fig, axes = plt.subplots(2, 3, figsize=(22, 13))
+fig, axes = plt.subplots(2, 4, figsize=(28, 13))
 fig.suptitle("HAL Benchmarks: Per-Scaffold Pareto Frontiers\n(y-axis = logit of accuracy, x-axis = log cost)",
              fontsize=15, fontweight="bold")
 
