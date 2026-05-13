@@ -1,9 +1,14 @@
 
-#### What's Up With Scaffolding
+#### Just a Wrapper
+
+I am the shape the water takes
+
+- ClawdBot, Moltbook (<https://www.astralcodexten.com/p/best-of-moltbook?hide_intro_popup=true>)
 
 When we think about AI improvment we often focus on the role of pretraining, reinforcement learning, inference efficincy improvements.  However, scaffolding or everything else is overlooked. However, it has a incredibly important role in the If we want a full view of what drives progres in language modles we have to start understanding scaffolding. Here we try to startg getting a hold on these effects using data from the Holistic Agent Leaderboard (HAL).
 
-# What is Scaffolding:
+# What is Scaffolding
+
 Scaffolidng is everything that is not included in traditional AI scaling.
 This can include:
 
@@ -18,13 +23,13 @@ This can include:
 Scaffolding Has Large Impact on AI Performance
 Given the protean nature of scaffolding, it not suprising that its effects
 
-# Scaffolding Effect on Ranking:
+# Scaffolding Effect on Ranking
 
 # Does Scaffolding Matter Less At Higher Capabilities
 
 - graphs of capabilitey correlation
 
-# Claude Scaffold is Suspiciously Strong:
+# Claude Scaffold is Suspiciously Strong
 
 # Why This Can Change The Agent Economy
 
