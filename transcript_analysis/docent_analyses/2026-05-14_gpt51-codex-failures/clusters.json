@@ -1,0 +1,32 @@
+[
+  {
+    "name": "exploratory_stall_no_artifact",
+    "description": "The agent spent the run inspecting files, grepping, reading docs/source, diagnosing, or planning, but never created the required deliverable file, script, config, query, binary, or output. A concrete improvement would be to force an early minimal artifact and iterate on it rather than remaining in reconnaissance mode.",
+    "estimated_count": 17
+  },
+  {
+    "name": "unrecovered_tooling_or_external_blocker",
+    "description": "The agent hit missing tools, build dependencies, unavailable compilers, package-install problems, network/API/video access failures, or other environmental blockers and did not switch to a viable fallback. This calls for better contingency behavior: use installed alternatives, vendor small replacements, adjust the approach, or continue from cached/local data instead of stopping at setup/access failures.",
+    "estimated_count": 11
+  },
+  {
+    "name": "partial_workflow_not_finalized",
+    "description": "The agent began a plausible solution but failed to complete the required workflow: it did not rerun after discovering the fix, left validation failures unresolved, failed to execute a generated script, or left a merge/conflict/task state unfinished. The fix is to require end-to-end completion checks against the task\u2019s stated success condition before stopping.",
+    "estimated_count": 4
+  },
+  {
+    "name": "flawed_or_non_general_solution",
+    "description": "The agent produced code or output, but the core method was wrong, brittle, overfit to visible examples, violated the specified interface/format, used a narrow regex/heuristic, or ignored required semantics. A better agent should reason from the full specification, test hidden-case-like behavior, and avoid shortcuts that only satisfy visible examples or superficial checks.",
+    "estimated_count": 12
+  },
+  {
+    "name": "deployment_configuration_incomplete",
+    "description": "The agent installed, launched, or partially configured a service/runtime but missed a critical persistent configuration detail or did not verify the actual external contract, such as root SSH login, PATH availability, VM desktop accessibility, or web/service reachability. The improvement is to perform end-to-end verification from the grader\u2019s perspective, not just local process/status checks.",
+    "estimated_count": 3
+  },
+  {
+    "name": "execution_control_or_protocol_failure",
+    "description": "The failure was caused by losing control of the terminal/process or not following the benchmark interaction protocol: runaway foreground jobs, Vim/interactive automation mistakes, or failing to submit the required final completion JSON. Agents need stronger process management, timeout/interrupt handling, and protocol-state awareness before declaring completion.",
+    "estimated_count": 3
+  }
+]

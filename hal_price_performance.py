@@ -13,6 +13,54 @@ from scipy.special import logit, expit
 BASE = Path(__file__).parent
 HAL = BASE / "hal_data"
 
+# ─── Behavior toggles (edit these to quickly change plot behavior) ────────────
+SHOW_POINT_LABELS = False     # annotate each scatter point with the model name
+SHOW_VECTOR_LABELS = True     # annotate scaffold-switch arrows with the model name
+COST_AXIS_IN_DOLLARS = True   # format cost axis as $1000 instead of 10^3
+
+# ─── Plot configuration ──────────────────────────────────────────────────────
+# All styling knobs live here. Bump these to make text/markers larger.
+SAVE_DPI = 150
+
+# Overview grid figure (2 x 4 of all benchmarks)
+GRID_FIGSIZE = (30, 15)
+GRID_SUPTITLE_FONTSIZE = 24
+GRID_TITLE_FONTSIZE = 18
+GRID_LABEL_FONTSIZE = 16
+GRID_TICK_FONTSIZE = 14
+GRID_ANNOT_FONTSIZE = 8
+GRID_LEGEND_FONTSIZE = 11
+GRID_POINT_SIZE = 90
+GRID_LINEWIDTH = 2
+
+# Individual per-benchmark frontier figures
+IND_FIGSIZE = (13, 8)
+IND_TITLE_FONTSIZE = 22
+IND_LABEL_FONTSIZE = 19
+IND_TICK_FONTSIZE = 16
+IND_ANNOT_FONTSIZE = 12
+IND_LEGEND_FONTSIZE = 14
+IND_POINT_SIZE = 130
+IND_LINEWIDTH = 2.5
+
+# Scaffold-switch vector figures
+VEC_FIGSIZE = (17, 11)
+VEC_TITLE_FONTSIZE = 24
+VEC_LABEL_FONTSIZE = 21
+VEC_TICK_FONTSIZE = 18
+VEC_ANNOT_FONTSIZE = 15
+VEC_LEGEND_FONTSIZE = 16
+VEC_LEGEND_TITLE_FONTSIZE = 17
+VEC_ARROW_LW = 3.5
+VEC_ARROW_MUTATION = 34
+VEC_POINT_SIZE = 140
+VEC_POINT_ALPHA = 0.45
+
+# Point outlines (helps faint markers stand out on busy plots)
+POINT_EDGE_COLOR = "#1a1a1a"
+POINT_EDGE_WIDTH = 1.2
+VEC_POINT_EDGE_WIDTH = 2.0
+
 
 def parse_pct(s):
     """Extract first numeric value from a percentage string like '38.81%' or '61.00%(-7.00/+7.00)'."""
@@ -84,6 +132,15 @@ def make_pct_formatter():
     return mticker.FuncFormatter(fmt)
 
 
+def make_dollar_formatter():
+    """Formatter that shows cost-axis ticks as dollars (e.g. $1000 instead of 10^3)."""
+    def fmt(x, pos):
+        if x >= 1:
+            return f"${x:,.0f}"
+        return f"${x:,.2f}"
+    return mticker.FuncFormatter(fmt)
+
+
 # Define which benchmarks to plot and their configs
 BENCHMARKS = [
     ("swe_bench_mini_verified.csv", "SWE-bench Mini Verified", "Primary Model"),
@@ -99,9 +156,9 @@ BENCHMARKS = [
 LINESTYLES = ["-", "--", "-.", ":"]
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
-fig, axes = plt.subplots(2, 4, figsize=(28, 13))
+fig, axes = plt.subplots(2, 4, figsize=GRID_FIGSIZE)
 fig.suptitle("HAL Benchmarks: Per-Scaffold Pareto Frontiers\n(y-axis = logit of accuracy, x-axis = log cost)",
-             fontsize=15, fontweight="bold")
+             fontsize=GRID_SUPTITLE_FONTSIZE, fontweight="bold")
 
 for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
     ax = axes.flat[idx]
@@ -119,50 +176,54 @@ for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
         logit_acc = logit_score(grp["accuracy"])
 
         # Scatter points
-        ax.scatter(grp["cost"], logit_acc, c=[color], s=50, alpha=0.6,
-                   marker=marker, edgecolors="white", linewidths=0.3, zorder=3)
+        ax.scatter(grp["cost"], logit_acc, c=[color], s=GRID_POINT_SIZE, alpha=0.6,
+                   marker=marker, edgecolors=POINT_EDGE_COLOR, linewidths=POINT_EDGE_WIDTH, zorder=3)
 
         # Label points with model name
-        for _, row in grp.iterrows():
-            model_short = re.sub(r"\s*\(.*?\)", "", str(row["Model"]))
-            model_short = model_short.replace("Claude ", "C.").replace("Sonnet", "Son").replace("Opus", "Op")
-            model_short = model_short.replace("GPT-", "G").replace("DeepSeek", "DS")
-            model_short = model_short.replace("Gemini", "Gem").replace("High", "H")
-            ax.annotate(model_short, (row["cost"], logit_score(row["accuracy"])),
-                        textcoords="offset points", xytext=(4, 3), fontsize=5,
-                        alpha=0.7, color=color)
+        if SHOW_POINT_LABELS:
+            for _, row in grp.iterrows():
+                model_short = re.sub(r"\s*\(.*?\)", "", str(row["Model"]))
+                model_short = model_short.replace("Claude ", "C.").replace("Sonnet", "Son").replace("Opus", "Op")
+                model_short = model_short.replace("GPT-", "G").replace("DeepSeek", "DS")
+                model_short = model_short.replace("Gemini", "Gem").replace("High", "H")
+                ax.annotate(model_short, (row["cost"], logit_score(row["accuracy"])),
+                            textcoords="offset points", xytext=(4, 3), fontsize=GRID_ANNOT_FONTSIZE,
+                            alpha=0.7, color=color)
 
         # Per-scaffold Pareto frontier
         pareto = compute_pareto(grp)
         if len(pareto) >= 2:
             pareto_sorted = pareto.sort_values("cost")
             ax.step(pareto_sorted["cost"], logit_score(pareto_sorted["accuracy"]),
-                    where="post", color=color, linewidth=2, linestyle=ls,
+                    where="post", color=color, linewidth=GRID_LINEWIDTH, linestyle=ls,
                     alpha=0.8, zorder=4, label=scaffold)
         else:
             # Still add to legend even with 1 point
-            ax.scatter([], [], c=[color], marker=marker, s=50, label=scaffold)
+            ax.scatter([], [], c=[color], marker=marker, s=GRID_POINT_SIZE, label=scaffold)
 
     ax.set_xscale("log")
-    ax.set_xlabel("Cost (USD, log scale)")
-    ax.set_ylabel("Accuracy (logit scale)")
-    ax.set_title(title, fontsize=12, fontweight="bold")
+    ax.set_xlabel("Cost (USD, log scale)", fontsize=GRID_LABEL_FONTSIZE)
+    ax.set_ylabel("Accuracy (logit scale)", fontsize=GRID_LABEL_FONTSIZE)
+    ax.set_title(title, fontsize=GRID_TITLE_FONTSIZE, fontweight="bold")
     ax.yaxis.set_major_formatter(make_pct_formatter())
+    if COST_AXIS_IN_DOLLARS:
+        ax.xaxis.set_major_formatter(make_dollar_formatter())
+    ax.tick_params(axis="both", labelsize=GRID_TICK_FONTSIZE)
     ax.grid(True, alpha=0.3)
 
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), fontsize=7, loc="lower right",
+    ax.legend(by_label.values(), by_label.keys(), fontsize=GRID_LEGEND_FONTSIZE, loc="lower right",
               framealpha=0.8)
 
 plt.tight_layout()
-plt.savefig(BASE / "figures" / "hal_price_performance_frontier.png", dpi=150, bbox_inches="tight")
+plt.savefig(BASE / "figures" / "hal_price_performance_frontier.png", dpi=SAVE_DPI, bbox_inches="tight")
 plt.savefig(BASE / "figures" / "hal_price_performance_frontier.pdf", bbox_inches="tight")
 print("Saved: hal_price_performance_frontier.png/pdf")
 
 # ─── Individual larger figures per benchmark ─────────────────────────────────
 for fname, title, mcol in BENCHMARKS:
-    fig_ind, ax = plt.subplots(figsize=(12, 7))
+    fig_ind, ax = plt.subplots(figsize=IND_FIGSIZE)
     df = load_hal(fname, mcol)
 
     scaffolds = sorted(df["scaffold"].unique())
@@ -176,42 +237,46 @@ for fname, title, mcol in BENCHMARKS:
         ls = LINESTYLES[si % len(LINESTYLES)]
         logit_acc = logit_score(grp["accuracy"])
 
-        ax.scatter(grp["cost"], logit_acc, c=[color], s=70, alpha=0.65,
-                   marker=marker, edgecolors="white", linewidths=0.4, zorder=3)
+        ax.scatter(grp["cost"], logit_acc, c=[color], s=IND_POINT_SIZE, alpha=0.65,
+                   marker=marker, edgecolors=POINT_EDGE_COLOR, linewidths=POINT_EDGE_WIDTH, zorder=3)
 
-        for _, row in grp.iterrows():
-            model_short = re.sub(r"\s*\(.*?\)", "", str(row["Model"]))
-            ax.annotate(model_short, (row["cost"], logit_score(row["accuracy"])),
-                        textcoords="offset points", xytext=(5, 4), fontsize=7,
-                        alpha=0.8, color=color)
+        if SHOW_POINT_LABELS:
+            for _, row in grp.iterrows():
+                model_short = re.sub(r"\s*\(.*?\)", "", str(row["Model"]))
+                ax.annotate(model_short, (row["cost"], logit_score(row["accuracy"])),
+                            textcoords="offset points", xytext=(5, 4), fontsize=IND_ANNOT_FONTSIZE,
+                            alpha=0.8, color=color)
 
         # Per-scaffold Pareto frontier
         pareto = compute_pareto(grp)
         if len(pareto) >= 2:
             pareto_sorted = pareto.sort_values("cost")
             ax.step(pareto_sorted["cost"], logit_score(pareto_sorted["accuracy"]),
-                    where="post", color=color, linewidth=2.5, linestyle=ls,
+                    where="post", color=color, linewidth=IND_LINEWIDTH, linestyle=ls,
                     alpha=0.85, zorder=4, label=f"{scaffold} frontier")
             ax.scatter(pareto_sorted["cost"], logit_score(pareto_sorted["accuracy"]),
-                       marker=marker, s=100, facecolors="none", edgecolors=color,
+                       marker=marker, s=IND_POINT_SIZE + 30, facecolors="none", edgecolors=color,
                        linewidths=2, zorder=5)
         else:
-            ax.scatter([], [], c=[color], marker=marker, s=70, label=scaffold)
+            ax.scatter([], [], c=[color], marker=marker, s=IND_POINT_SIZE, label=scaffold)
 
     ax.set_xscale("log")
-    ax.set_xlabel("Cost per task (USD, log scale)", fontsize=12)
-    ax.set_ylabel("Accuracy (logit scale, shown as %)", fontsize=12)
-    ax.set_title(f"{title}: Per-Scaffold Price-Performance Frontier", fontsize=14, fontweight="bold")
+    ax.set_xlabel("Cost per task (USD, log scale)", fontsize=IND_LABEL_FONTSIZE)
+    ax.set_ylabel("Accuracy (logit scale, shown as %)", fontsize=IND_LABEL_FONTSIZE)
+    ax.set_title(f"{title}: Per-Scaffold Price-Performance Frontier", fontsize=IND_TITLE_FONTSIZE, fontweight="bold")
     ax.yaxis.set_major_formatter(make_pct_formatter())
+    if COST_AXIS_IN_DOLLARS:
+        ax.xaxis.set_major_formatter(make_dollar_formatter())
+    ax.tick_params(axis="both", labelsize=IND_TICK_FONTSIZE)
     ax.grid(True, alpha=0.3)
     handles, labels = ax.get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    ax.legend(by_label.values(), by_label.keys(), fontsize=9, loc="lower right",
+    ax.legend(by_label.values(), by_label.keys(), fontsize=IND_LEGEND_FONTSIZE, loc="lower right",
               framealpha=0.9)
 
     safe_name = title.lower().replace(" ", "_").replace("-", "_").replace(".", "")
     fig_ind.tight_layout()
-    fig_ind.savefig(BASE / "figures" / f"hal_frontier_{safe_name}.png", dpi=150, bbox_inches="tight")
+    fig_ind.savefig(BASE / "figures" / f"hal_frontier_{safe_name}.png", dpi=SAVE_DPI, bbox_inches="tight")
     print(f"Saved: hal_frontier_{safe_name}.png")
     plt.close(fig_ind)
 
@@ -231,6 +296,29 @@ def normalize_model_name(s):
     return s.strip()
 
 
+# Color each vector by the quadrant it heads toward:
+#   accuracy change (dy) x cost change (dx)
+QUADRANT_COLORS = {
+    "more_acc_less_exp": "#2ca02c",   # green  — better & cheaper (best)
+    "more_acc_more_exp": "#1f77b4",   # blue   — better but pricier
+    "less_acc_less_exp": "#ff7f0e",   # orange — worse but cheaper
+    "less_acc_more_exp": "#d62728",   # red    — worse & pricier (worst)
+}
+QUADRANT_LABELS = {
+    "more_acc_less_exp": "More accurate · less expensive",
+    "more_acc_more_exp": "More accurate · more expensive",
+    "less_acc_less_exp": "Less accurate · less expensive",
+    "less_acc_more_exp": "Less accurate · more expensive",
+}
+
+
+def classify_quadrant(dx, dy):
+    """dx = change in log cost, dy = change in logit accuracy."""
+    acc = "more_acc" if dy >= 0 else "less_acc"
+    exp = "more_exp" if dx >= 0 else "less_exp"
+    return f"{acc}_{exp}"
+
+
 for fname, title, mcol in BENCHMARKS:
     df = load_hal(fname, mcol)
     df["model_norm"] = df["Model"].apply(normalize_model_name)
@@ -239,15 +327,15 @@ for fname, title, mcol in BENCHMARKS:
     if len(scaffolds) < 2:
         continue
 
-    fig_v, ax = plt.subplots(figsize=(13, 8))
+    fig_v, ax = plt.subplots(figsize=VEC_FIGSIZE)
 
     cmap = plt.cm.tab10
     scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
 
-    # For each scaffold pair, find shared models and draw vectors
-    # We'll draw from scaffold i to scaffold j for all i < j
-    pair_idx = 0
-    arrow_colors = plt.cm.Dark2(np.linspace(0, 1, 8))
+    # For each scaffold pair, find shared models and draw vectors.
+    # Arrows are colored by the quadrant they head toward (not by pair).
+    used_quadrants = set()
+    used_transitions = []  # (s1, s2) pairs that actually had arrows, in order
 
     for i in range(len(scaffolds)):
         for j in range(i + 1, len(scaffolds)):
@@ -260,8 +348,7 @@ for fname, title, mcol in BENCHMARKS:
             if not shared_models:
                 continue
 
-            ac = arrow_colors[pair_idx % len(arrow_colors)]
-            pair_idx += 1
+            used_transitions.append((s1, s2))
 
             for model in sorted(shared_models):
                 rows1 = df1[df1["model_norm"] == model]
@@ -273,47 +360,71 @@ for fname, title, mcol in BENCHMARKS:
                 x1, y1 = np.log10(r1["cost"]), logit_score(r1["accuracy"])
                 x2, y2 = np.log10(r2["cost"]), logit_score(r2["accuracy"])
 
+                quad = classify_quadrant(x2 - x1, y2 - y1)
+                ac = QUADRANT_COLORS[quad]
+                used_quadrants.add(quad)
+
                 ax.annotate("",
                             xy=(x2, y2), xytext=(x1, y1),
                             arrowprops=dict(arrowstyle="-|>", color=ac,
-                                            lw=1.8, alpha=0.7,
-                                            connectionstyle="arc3,rad=0.05"))
+                                            lw=VEC_ARROW_LW, alpha=0.85,
+                                            mutation_scale=VEC_ARROW_MUTATION,
+                                            connectionstyle="arc3,rad=0.05"),
+                            zorder=4)
 
                 # Label at midpoint
-                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-                ax.annotate(model, (mx, my),
-                            fontsize=6.5, color="black", alpha=0.8,
-                            ha="center", va="bottom",
-                            textcoords="offset points", xytext=(0, 3))
-
-            # Invisible scatter for legend
-            ax.plot([], [], color=ac, lw=2, label=f"{s1} → {s2}")
+                if SHOW_VECTOR_LABELS:
+                    mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                    ax.annotate(model, (mx, my),
+                                fontsize=VEC_ANNOT_FONTSIZE, color="black", alpha=0.9,
+                                fontweight="bold",
+                                ha="center", va="bottom",
+                                textcoords="offset points", xytext=(0, 5),
+                                zorder=5)
 
     # Also scatter all raw points faintly for context
     for scaffold in scaffolds:
         grp = df[df["scaffold"] == scaffold]
         color = scaffold_colors[scaffold]
         ax.scatter(np.log10(grp["cost"]), logit_score(grp["accuracy"]),
-                   c=[color], s=40, alpha=0.3, zorder=2, marker="o",
-                   edgecolors="none")
+                   c=[color], s=VEC_POINT_SIZE, alpha=VEC_POINT_ALPHA, zorder=2, marker="o",
+                   edgecolors=POINT_EDGE_COLOR, linewidths=VEC_POINT_EDGE_WIDTH)
 
-    ax.set_xlabel("Cost per task (log₁₀ USD)", fontsize=12)
-    ax.set_ylabel("Accuracy (logit scale, shown as %)", fontsize=12)
-    ax.set_title(f"{title}: Scaffold-Switch Vectors\n(arrows show same model moving between scaffolds)",
-                 fontsize=13, fontweight="bold")
+    ax.set_xlabel("Cost per task (log₁₀ USD)", fontsize=VEC_LABEL_FONTSIZE)
+    ax.set_ylabel("Accuracy (logit scale, shown as %)", fontsize=VEC_LABEL_FONTSIZE)
+
+    # Build a subtitle describing the direction the arrows point.
+    if used_transitions:
+        transition_strs = [f"{s1} → {s2}" for s1, s2 in used_transitions]
+        subtitle = "arrows point: " + ";  ".join(transition_strs)
+    else:
+        subtitle = "arrows show same model moving between scaffolds"
+    ax.set_title(f"{title}: Scaffold-Switch Vectors\n({subtitle})",
+                 fontsize=VEC_TITLE_FONTSIZE, fontweight="bold")
     ax.yaxis.set_major_formatter(make_pct_formatter())
+    ax.tick_params(axis="both", labelsize=VEC_TICK_FONTSIZE)
 
-    # Custom x-axis ticks in dollars
-    xticks = ax.get_xticks()
-    ax.xaxis.set_major_formatter(mticker.FuncFormatter(lambda x, p: f"${10**x:.0f}" if 10**x >= 1 else f"${10**x:.2f}"))
+    # Custom x-axis ticks in dollars (vector x-axis is log10, so dollar value = 10**x)
+    if COST_AXIS_IN_DOLLARS:
+        ax.xaxis.set_major_formatter(
+            mticker.FuncFormatter(lambda x, p: f"${10**x:,.0f}" if 10**x >= 1 else f"${10**x:,.2f}"))
 
     ax.grid(True, alpha=0.3)
-    ax.legend(fontsize=10, loc="lower right", framealpha=0.9,
-              title="Scaffold transition", title_fontsize=10)
+
+    # Legend keyed by quadrant direction (only those that appear)
+    legend_order = ["more_acc_less_exp", "more_acc_more_exp",
+                    "less_acc_less_exp", "less_acc_more_exp"]
+    legend_handles = [
+        plt.Line2D([], [], color=QUADRANT_COLORS[q], lw=4, label=QUADRANT_LABELS[q])
+        for q in legend_order if q in used_quadrants
+    ]
+    if legend_handles:
+        ax.legend(handles=legend_handles, fontsize=VEC_LEGEND_FONTSIZE, loc="lower right",
+                  framealpha=0.9, title="Direction of switch", title_fontsize=VEC_LEGEND_TITLE_FONTSIZE)
 
     fig_v.tight_layout()
     safe_name = title.lower().replace(" ", "_").replace("-", "_").replace(".", "")
-    fig_v.savefig(BASE / "figures" / f"hal_vectors_{safe_name}.png", dpi=150, bbox_inches="tight")
+    fig_v.savefig(BASE / "figures" / f"hal_vectors_{safe_name}.png", dpi=SAVE_DPI, bbox_inches="tight")
     print(f"Saved: hal_vectors_{safe_name}.png")
     plt.close(fig_v)
 
