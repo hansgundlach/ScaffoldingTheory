@@ -221,15 +221,21 @@ if len(stats_df) > 0:
     bars_tau = ax_s.barh([y + bar_h/2 for y in y_pos], stats_df["kendall_tau"],
                           height=bar_h, color="tab:orange", alpha=0.75, label="Kendall τ")
 
-    # Value labels
-    for bar, val, p in zip(bars_rho, stats_df["spearman_rho"], stats_df["spearman_p"]):
-        sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
-        ax_s.text(bar.get_width() + 0.02, bar.get_y() + bar.get_height()/2,
-                  f"{val:.2f}{sig}", va="center", fontsize=9, color="tab:blue")
-    for bar, val, p in zip(bars_tau, stats_df["kendall_tau"], stats_df["kendall_p"]):
-        sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
-        ax_s.text(bar.get_width() + 0.02, bar.get_y() + bar.get_height()/2,
-                  f"{val:.2f}{sig}", va="center", fontsize=9, color="tab:orange")
+    # Value labels — place outside the bar tip on the correct side so negative
+    # bars don't cram their labels against the y-axis / category labels.
+    def label_bars(bars, vals, ps, color):
+        for bar, val, p in zip(bars, vals, ps):
+            sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
+            w = bar.get_width()
+            if w >= 0:
+                x, ha = w + 0.02, "left"
+            else:
+                x, ha = w - 0.02, "right"
+            ax_s.text(x, bar.get_y() + bar.get_height()/2,
+                      f"{val:.2f}{sig}", va="center", ha=ha, fontsize=9, color=color)
+
+    label_bars(bars_rho, stats_df["spearman_rho"], stats_df["spearman_p"], "tab:blue")
+    label_bars(bars_tau, stats_df["kendall_tau"], stats_df["kendall_p"], "tab:orange")
 
     ax_s.set_yticks(list(y_pos))
     ax_s.set_yticklabels(labels, fontsize=8)
@@ -238,7 +244,7 @@ if len(stats_df) > 0:
                     fontsize=13, fontweight="bold")
     ax_s.axvline(x=0, color="black", linewidth=0.8)
     ax_s.axvline(x=1, color="gray", linewidth=0.5, linestyle=":")
-    ax_s.set_xlim(-0.3, 1.3)
+    ax_s.set_xlim(-0.55, 1.3)
     ax_s.legend(fontsize=10, loc="lower right")
     ax_s.grid(True, axis="x", alpha=0.3)
     ax_s.invert_yaxis()

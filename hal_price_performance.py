@@ -17,6 +17,7 @@ HAL = BASE / "hal_data"
 SHOW_POINT_LABELS = False     # annotate each scatter point with the model name
 SHOW_VECTOR_LABELS = True     # annotate scaffold-switch arrows with the model name
 COST_AXIS_IN_DOLLARS = True   # format cost axis as $1000 instead of 10^3
+EPOCH_STYLE = False           # also render Epoch-AI-styled vector plots (hal_vectors_epoch_*.png)
 
 # ─── Plot configuration ──────────────────────────────────────────────────────
 # All styling knobs live here. Bump these to make text/markers larger.
@@ -319,18 +320,70 @@ def classify_quadrant(dx, dy):
     return f"{acc}_{exp}"
 
 
-for fname, title, mcol in BENCHMARKS:
+# ─── Epoch-AI-inspired theme ─────────────────────────────────────────────────
+# Light canvas, minimal spines, horizontal-only gridlines, left-aligned bold
+# title with a gray subtitle, muted categorical palette, and a source footer.
+EPOCH_RC = {
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
+    "figure.facecolor": "#FFFFFF",
+    "axes.facecolor": "#FFFFFF",
+    "axes.edgecolor": "#C7C7CF",
+    "axes.linewidth": 1.0,
+    "axes.axisbelow": True,
+    "xtick.color": "#5A5A66",
+    "ytick.color": "#5A5A66",
+    "text.color": "#16161D",
+    "axes.labelcolor": "#3A3A44",
+}
+# Quadrant arrow colors tuned to Epoch's muted palette (semantics preserved).
+EPOCH_QUADRANT_COLORS = {
+    "more_acc_less_exp": "#119DA4",   # teal  — better & cheaper (best)
+    "more_acc_more_exp": "#2E5EAA",   # blue  — better but pricier
+    "less_acc_less_exp": "#E1A730",   # amber — worse but cheaper
+    "less_acc_more_exp": "#C5283D",   # red   — worse & pricier (worst)
+}
+EPOCH_SCAFFOLD_PALETTE = ["#3C6E9F", "#E07A3F", "#5BA88B", "#9B6BB0", "#C0556B", "#6C8EAD"]
+EPOCH_TEXT_DARK = "#16161D"
+EPOCH_TEXT_GRAY = "#5A5A66"
+EPOCH_SOURCE = "Source: HAL benchmark data  ·  chart styled after Epoch AI"
+
+
+def slugify(s):
+    """Lowercase, alphanumeric-only slug for filenames."""
+    return re.sub(r"[^a-z0-9]+", "_", str(s).lower()).strip("_")
+
+
+def render_vector_figure(fname, title, mcol, style="default", pair=None):
+    """Render one scaffold-switch vector plot. style is 'default' or 'epoch'.
+
+    If `pair` is given as a (scaffold_a, scaffold_b) tuple, only that single
+    scaffold pair is drawn (one figure per pair); otherwise every pair is
+    drawn on the same figure.
+    """
+    epoch = style == "epoch"
+    quad_colors = EPOCH_QUADRANT_COLORS if epoch else QUADRANT_COLORS
+
     df = load_hal(fname, mcol)
     df["model_norm"] = df["Model"].apply(normalize_model_name)
 
-    scaffolds = sorted(df["scaffold"].dropna().unique())
+    if pair is not None:
+        scaffolds = [s for s in pair if s in set(df["scaffold"].dropna())]
+    else:
+        scaffolds = sorted(df["scaffold"].dropna().unique())
     if len(scaffolds) < 2:
-        continue
+        return
 
     fig_v, ax = plt.subplots(figsize=VEC_FIGSIZE)
 
-    cmap = plt.cm.tab10
-    scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
+    if epoch:
+        scaffold_colors = {s: EPOCH_SCAFFOLD_PALETTE[i % len(EPOCH_SCAFFOLD_PALETTE)]
+                           for i, s in enumerate(scaffolds)}
+    else:
+        cmap = plt.cm.tab10
+        scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
+
+    label_color = EPOCH_TEXT_DARK if epoch else "black"
 
     # For each scaffold pair, find shared models and draw vectors.
     # Arrows are colored by the quadrant they head toward (not by pair).
@@ -361,13 +414,13 @@ for fname, title, mcol in BENCHMARKS:
                 x2, y2 = np.log10(r2["cost"]), logit_score(r2["accuracy"])
 
                 quad = classify_quadrant(x2 - x1, y2 - y1)
-                ac = QUADRANT_COLORS[quad]
+                ac = quad_colors[quad]
                 used_quadrants.add(quad)
 
                 ax.annotate("",
                             xy=(x2, y2), xytext=(x1, y1),
                             arrowprops=dict(arrowstyle="-|>", color=ac,
-                                            lw=VEC_ARROW_LW, alpha=0.85,
+                                            lw=VEC_ARROW_LW, alpha=0.9 if epoch else 0.85,
                                             mutation_scale=VEC_ARROW_MUTATION,
                                             connectionstyle="arc3,rad=0.05"),
                             zorder=4)
@@ -376,8 +429,8 @@ for fname, title, mcol in BENCHMARKS:
                 if SHOW_VECTOR_LABELS:
                     mx, my = (x1 + x2) / 2, (y1 + y2) / 2
                     ax.annotate(model, (mx, my),
-                                fontsize=VEC_ANNOT_FONTSIZE, color="black", alpha=0.9,
-                                fontweight="bold",
+                                fontsize=VEC_ANNOT_FONTSIZE, color=label_color, alpha=0.95,
+                                fontweight="bold" if not epoch else "medium",
                                 ha="center", va="bottom",
                                 textcoords="offset points", xytext=(0, 5),
                                 zorder=5)
@@ -394,13 +447,14 @@ for fname, title, mcol in BENCHMARKS:
     ax.set_ylabel("Accuracy (logit scale, shown as %)", fontsize=VEC_LABEL_FONTSIZE)
 
     # Build a subtitle describing the direction the arrows point.
+    # (Helvetica Neue lacks the "→" glyph, so spell it out in the Epoch variant.)
+    arrow_sep = " to " if epoch else " → "
     if used_transitions:
-        transition_strs = [f"{s1} → {s2}" for s1, s2 in used_transitions]
+        transition_strs = [f"{s1}{arrow_sep}{s2}" for s1, s2 in used_transitions]
         subtitle = "arrows point: " + ";  ".join(transition_strs)
     else:
         subtitle = "arrows show same model moving between scaffolds"
-    ax.set_title(f"{title}: Scaffold-Switch Vectors\n({subtitle})",
-                 fontsize=VEC_TITLE_FONTSIZE, fontweight="bold")
+
     ax.yaxis.set_major_formatter(make_pct_formatter())
     ax.tick_params(axis="both", labelsize=VEC_TICK_FONTSIZE)
 
@@ -409,23 +463,77 @@ for fname, title, mcol in BENCHMARKS:
         ax.xaxis.set_major_formatter(
             mticker.FuncFormatter(lambda x, p: f"${10**x:,.0f}" if 10**x >= 1 else f"${10**x:,.2f}"))
 
-    ax.grid(True, alpha=0.3)
-
     # Legend keyed by quadrant direction (only those that appear)
     legend_order = ["more_acc_less_exp", "more_acc_more_exp",
                     "less_acc_less_exp", "less_acc_more_exp"]
     legend_handles = [
-        plt.Line2D([], [], color=QUADRANT_COLORS[q], lw=4, label=QUADRANT_LABELS[q])
+        plt.Line2D([], [], color=quad_colors[q], lw=4, label=QUADRANT_LABELS[q])
         for q in legend_order if q in used_quadrants
     ]
-    if legend_handles:
-        ax.legend(handles=legend_handles, fontsize=VEC_LEGEND_FONTSIZE, loc="lower right",
-                  framealpha=0.9, title="Direction of switch", title_fontsize=VEC_LEGEND_TITLE_FONTSIZE)
+
+    if epoch:
+        # Left-aligned bold title + gray subtitle, Epoch-style header.
+        ax.set_title(f"{title}: Scaffold-Switch Vectors", loc="left", pad=38,
+                     fontsize=VEC_TITLE_FONTSIZE, fontweight="bold", color=EPOCH_TEXT_DARK)
+        ax.text(0.0, 1.018, subtitle, transform=ax.transAxes,
+                fontsize=VEC_TITLE_FONTSIZE * 0.62, color=EPOCH_TEXT_GRAY, va="bottom")
+        # Minimal spines, horizontal-only gridlines.
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.grid(True, axis="y", color="#E6E6EA", linewidth=1.0)
+        ax.grid(False, axis="x")
+        if legend_handles:
+            leg = ax.legend(handles=legend_handles, fontsize=VEC_LEGEND_FONTSIZE,
+                            loc="lower right", frameon=False,
+                            title="Direction of switch", title_fontsize=VEC_LEGEND_TITLE_FONTSIZE)
+            leg.get_title().set_color(EPOCH_TEXT_GRAY)
+        # Source footer, bottom-left.
+        fig_v.text(0.01, 0.005, EPOCH_SOURCE, fontsize=VEC_TICK_FONTSIZE * 0.7,
+                   color=EPOCH_TEXT_GRAY, style="italic", ha="left", va="bottom")
+        suffix = "epoch_"
+    else:
+        ax.set_title(f"{title}: Scaffold-Switch Vectors\n({subtitle})",
+                     fontsize=VEC_TITLE_FONTSIZE, fontweight="bold")
+        ax.grid(True, alpha=0.3)
+        if legend_handles:
+            ax.legend(handles=legend_handles, fontsize=VEC_LEGEND_FONTSIZE, loc="lower right",
+                      framealpha=0.9, title="Direction of switch",
+                      title_fontsize=VEC_LEGEND_TITLE_FONTSIZE)
+        suffix = ""
 
     fig_v.tight_layout()
     safe_name = title.lower().replace(" ", "_").replace("-", "_").replace(".", "")
-    fig_v.savefig(BASE / "figures" / f"hal_vectors_{safe_name}.png", dpi=SAVE_DPI, bbox_inches="tight")
-    print(f"Saved: hal_vectors_{safe_name}.png")
+    if pair is not None:
+        pair_slug = f"__{slugify(scaffolds[0])}_vs_{slugify(scaffolds[1])}"
+    else:
+        pair_slug = ""
+    fig_v.savefig(BASE / "figures" / f"hal_vectors_{suffix}{safe_name}{pair_slug}.png",
+                  dpi=SAVE_DPI, bbox_inches="tight")
+    print(f"Saved: hal_vectors_{suffix}{safe_name}{pair_slug}.png")
     plt.close(fig_v)
+
+
+def scaffold_pairs_with_shared_models(fname, mcol):
+    """Return all (s1, s2) scaffold pairs that share at least one model."""
+    df = load_hal(fname, mcol)
+    df["model_norm"] = df["Model"].apply(normalize_model_name)
+    scaffolds = sorted(df["scaffold"].dropna().unique())
+    pairs = []
+    for i in range(len(scaffolds)):
+        for j in range(i + 1, len(scaffolds)):
+            s1, s2 = scaffolds[i], scaffolds[j]
+            m1 = set(df[df["scaffold"] == s1]["model_norm"])
+            m2 = set(df[df["scaffold"] == s2]["model_norm"])
+            if m1 & m2:
+                pairs.append((s1, s2))
+    return pairs
+
+
+for fname, title, mcol in BENCHMARKS:
+    for pair in scaffold_pairs_with_shared_models(fname, mcol):
+        render_vector_figure(fname, title, mcol, style="default", pair=pair)
+        if EPOCH_STYLE:
+            with plt.rc_context(EPOCH_RC):
+                render_vector_figure(fname, title, mcol, style="epoch", pair=pair)
 
 plt.show()
