@@ -12,7 +12,7 @@
 
 
 **TL;DR:**
-- Specialist scaffolding improvemetns can be significant and can represent as much as two years' worth of algorithmic improvements in a given domain. 
+- Specialist scaffolding improvements can be significant and can represent as much as two years' worth of algorithmic progress in a given domain.
 - The effect of scaffolding is model-dependent: some models benefit from a given scaffold, while others may be hindered. They, therefore represent a unique case of AI enhancement/algorithmic progress. 
 - These scaffold-model interactions have important implications for comparing evaluation, performance, ranking models and understanding the agentic economy. 
 - In particular,dowstream providers can signficantly improve performance. However, model creators have a unique advantage improving downstream peformance on agentic systems built on their models. 
