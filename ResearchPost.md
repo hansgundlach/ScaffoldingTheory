@@ -155,7 +155,7 @@ In the same way, Apple is able to preferential benefits its applications rather 
 I think the complexities aroudn scaffolding  point to a larger point that AI capabilties are increasingly not being driven by the modles themselves but by the systems that they are embedded in. AI capabilties cannot be measurd in isolation. Agentic harnesses are one layer in this new structure but we will eventually need to account for the abilties of multiagent networks which will depend on much more complicated infrastrcture. Such structures may have complicated weight sharing and interactions that we cannot currently imagine.
 These systems will continuely blurr the line betwene what is and is not an AI. We will need to change how we account for the capabilites of more general intelligence.
 
-===========================================================
+<!-- =========================================================== -->
 
 # Appendix
 
