@@ -12,10 +12,10 @@
 
 **TL;DR:**
 
-- Specialist scaffolding improvements can be significant and can represent as much as two years' worth of algorithmic progress in a given domain.
+- Specialist scaffolding improvements can be significant and can represent as much as two years' worth of algorithmic progress in a given domain over generalist scaffolding.
 - The effect of scaffolding is model-dependent: some models benefit from a given scaffold, while others may be hindered. They, therefore represent a unique case of AI enhancement/algorithmic progress.
 - These scaffold-model interactions have important implications for comparing evaluation, performance, ranking models and understanding the agentic economy.
-- In particular,dowstream providers can signficantly improve performance. However, model creators have a unique advantage improving downstream peformance on agentic systems built on their models.
+- In particular, dowstream builders can signficantly improve performance. However, model creators have a unique advantage to improve peformance on agentic systems built on their models.
 
 When we think about what drives AI progress, we usually point to pretraining, reinforcement learning, and inference-time efficiency. Scaffolding — everything wrapped around the model to turn it into an agent — gets far less attention, even as it plays a growing role in how systems actually perform. If we want a full picture of what drives progress in language models, we need to understand scaffolding too. This post tries to get a handle on its effects using data from the Holistic Agent Leaderboard (HAL).
 HAL is an index of model performance on agentic benchmarks, reporting both accuracy and cost. HAL bench includes many agnetic benchmarks including AssistantBench, CORE-Bench HArd, GAIA, Online Mind2Web, SWE-bench Verified Mini, Scicode, ScienceAgentBench,  TAU-bench Airline, and USACO. These cover areas in software engineering, browser use, and agentic search. What makes it useful here is that it runs each model under multiple scaffolds per benchmark — typically a benchmark-specific scaffold alongside a general-purpose one. On CORE-Bench, for instance, models run under both the CORE-agent scaffold and the HAL generalist scaffold. The generalist scaffold is built on the smolagents framework: the model takes every action by writing Python code, so it "searches the internet," for example, by writing and running code that performs the search.
@@ -35,7 +35,7 @@ To get a better sense of what agenetic scaffoldign includes. We'll try to elabor
 - Token time cost limits, stopping rules
 - Agent loop : think → act → observe → repeat
 
-Previous work, such as [Davidson et al. (2023)](https://arxiv.org/pdf/2312.07413) examined the impact of some of these postraining improvements finding that techniques like majority voting and outcome verification could be equivalent to 10-100x compute efficiency gains. However, agentic scaffolding has become signifcantly more complex since then. In this post, we consider all these things in aggregate. Further work would hopefully be able to disentangle the relative importance of these components. For example, are scaffolds mostly the sum of their prompts or do they depend on more complicated engineering?
+Previous work, such as [Davidson et al. (2023)](https://arxiv.org/pdf/2312.07413) examined the impact of some of these postraining improvements finding that techniques like majority voting and outcome verification could be equivalent to 10-100x compute efficiency gains. However, agentic scaffolding has become signifcantly more complex since 2023. In this post, we consider all these things in aggregate. Further work would hopefully be able to disentangle the relative importance of these components. For example, are scaffolds mostly the sum of their prompts or do they depend on more complicated engineering?
 
 <!-- Before, we go deeper into our discussion we have to clarify what scaffolding is. 
 Scaffolidng is everything that is not included in traditional AI scaling.
@@ -43,9 +43,9 @@ This can include: -->
 
 Specialist Scaffolding Has Large Impact on AI Performance
 
-Given the protean nature of scaffolding, it's not surprising that its effects are large and vary widely. A given scaffold can significantly improve one model's performance while hurting another's. To examine this, we plot each model's final (logit transformed) accuracy against the API cost needed to reach it, across scaffolds.[^method]
+Given the protean nature of scaffolding, it's not surprising that its effects are large and vary widely. A given scaffold can significantly improve one model's performance while hurting another's. To examine this, we plot each model's final (logit transformed) accuracy against the API cost needed to reach that level of performance, across scaffolds.
 
-Below are per-scaffold price-performance frontiers for two benchmarks (CORE-Bench Hard and SciCode). Scaffold choice moves performance more than one might expect[^1]: switching from a generalist to a specialist scaffold can buy ~100× cheaper performance at the same accuracy. For context, algorithmic progress in AI inference typically cuts prices ~10× per year at fixed performance (see our [paper](https://arxiv.org/pdf/2511.23455)) — so switching scaffold can, in the strongest cases, be worth roughly two years of model progress. However, we also see that some scaffold aren't a strict pareto gain. For instance, a new scaffold is worse on some parts of the frontier and better on others. Finally, we see that claude code scaffold with claude models leads to excpetionally high performance. We will investigate why this is later in the peice.
+Below are per-scaffold price-performance frontiers for two benchmarks (CORE-Bench Hard and SciCode). We include grpahs for the rest of the bechmarks in the appendix. Scaffold choice moves performance more than one might expect[^1]: switching from a generalist to a specialist scaffold can buy ~100× cheaper performance at the same accuracy. For context, algorithmic progress in AI inference typically cuts prices ~10× per year at fixed performance (see our [paper](https://arxiv.org/pdf/2511.23455)) — so switching scaffold can, in the strongest cases, be worth roughly two years of model progress. However, we also see that some scaffold aren't a strict pareto gain. For instance, a new scaffold is worse on some parts of the frontier and better on others. Finally, we see that claude code scaffold with claude models (the orange group in CORE-bench) leads to excpetionally high performance. We will investigate why this is later in the peice.
 
 <!-- 
 
@@ -62,7 +62,7 @@ Below are per-scaffold price-performance frontiers for two benchmarks (CORE-benc
 
 [^1]: Although we do not have precise estimates of run-to-run variability from HAL bench, benchmark variation in general is typically quite small for most tasks. For instance, the standard error between runs on Epoch's benchmark hub is usually only 1–2% [Epoch AI Benchmark Data](https://epoch.ai/benchmarks/use-this-data).
 
-Scaffold effects can be large enough that in some cases it makes nearly as much sense to ask which scaffold you're running as which model. In the appendix we report an analysis of variance (ANOVA) decomposing performance into model and scaffold contributions; on some benchmarks, almost as much variation comes from scaffold as from model. It's almost as if the model is a component of the scaffold rather than the scaffold being a wrapper around the model.
+Scaffold effects can be large enough that in some cases it makes nearly as much sense to ask which scaffold you're running as which model. In the appendix we report an analysis of variance (ANOVA) decomposing performance into model and scaffold contributions; on some benchmarks, almost as much variation comes from scaffold as from model. It's nearly as if the model is a component of the scaffold rather than the scaffold being a wrapper around the model.
 
 <!-- 
 Scaffolding effect can be so large that in some cases it makes more sense to benchmark scaffolds rather than models ie it woule be better to have a learderboard of scaffolds rather than a model leaderboard. In the appendix, we include an analysis of variation (ANOVA) where we look at how much performance variation is due to model vs scaffold variation. In some cases, almost as much variation is due scaffolding. To put this in context, it is almost as if the model is a more of a utility/scaffold for the scaffold rather than the other way around.  -->
@@ -112,7 +112,7 @@ Even further, the effect of scaffolding can be so large that evaluators shoudl c
 
 ## Caveats
 
-While scaffolding is important we do not want to overestimate it. While we think the HAL generalist scaffold has a wide range of affordances. If we used a baseline which did not allow for tool calls for example we would attribute much larger gains to scaffolding. Our study does not imply that further scaffolding improvments would yield equivalent 100x gains. However, there is signficant potential for unhobbling in models.
+While scaffolding is important we do not want to overestimate it. While we think the HAL generalist scaffold has a wide range of affordances and represents a decient scaffold. If we used a baseline which did not allow for tool calls for example we would attribute much larger gains to scaffolding. Our study does not imply that further scaffolding improvments would yield equivalent 100x gains. However, it does suggest there signficant potential for "unhobbling" in models.
 
 <!-- =======================================
 
@@ -141,18 +141,25 @@ Random Modles on Claude Code Harness vs on regular hanress
 
 =========================================== -->
 
-# What Does Scaffolding Mean For the Agent Economy
 
-The interactions effects between models and harnesses and Claude's exceptional performance raise interesting questions about the downstream development of AI agents. On one side,the power of agnet harnesses points to the potential for downstream individuals and organizations to gain a durable advantage. These wrapper companies will be able to elicit performance that model providers will not be able to without signifcantly greater compute and interest.
+
+# What Does Scaffolding Mean For the Agent Economy ?
+
+The interactions effects between models and harnesses and Claude's exceptional performance raise interesting questions about the downstream development of AI agents. On one side,the power of agnet harnesses points to the potential for downstream individuals and organizations to gain a durable advantage. These wrapper companies will be able to elicit performance that models will not be able to without signifcantly greater compute and interest.
 However, we believe that scaffolding will in fact give model creators a decisive advantage over downstream groups. Scafolding demonstrates that "algorithmic improvements" can be restricted to certained models rather than be broadly available. Model creators will have unique cointegration benefits that downstream providers will not be able to access. For instance, claude can be specificaly trained on claude code harness. This copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research.  Further, claude's might have limited interoperability with other agentic harnesses nad downstream applications.
 In the same way, Apple is able to preferential benefits its applications rather than other providers applications on its app store. In the same way, claude will be able to prioritize the downstream frameworks it wants to succeeed. This makes it more likely that AI creators may have a greater monopoly over the ecosystem then previously realized.
 
 <!-- Further, the interactions effects point to deeper structural issues that may effect the AI ecosystem. AI createros have a unique ability to determine what downstream services will succeeed and which will fail. Further, this copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research. 
  -->
 
+
+
+ <!-- Too much attnetion is payed to the Evaluation AI and not much is payed to evluating the system AI is embeeded in. A good AI may become evil in bad circumstances and vice versa.  -->
+
 # Conclusion and The Future of AI Capabilities
 
-I think the complexities aroudn scaffolding  point to a larger point that AI capabilties are increasingly not being driven by the modles themselves but by the systems that they are embedded in. AI capabilties cannot be measurd in isolation. Agentic harnesses are one layer in this new structure but we will eventually need to account for the abilties of multiagent networks which will depend on much more complicated infrastrcture. Such structures may have complicated weight sharing and interactions that we cannot currently imagine.
+I think the complexities aroudn scaffolding  point to a larger point that AI capabilties are increasingly not being driven by the modles themselves but by the systems that they are embedded in. AI capabilties cannot be measurd in isolation. We should aim to not only evaluate AIs but the systems they are embedded in. A good AI may become evil in bad circumstances and vice versa. 
+Agentic harnesses are one layer in this new structure but we will eventually need to account for the abilties of multiagent networks which will depend on much more complicated infrastrcture. Such structures may have complicated weight sharing and interactions that we cannot currently imagine.
 These systems will continuely blurr the line betwene what is and is not an AI. We will need to change how we account for the capabilites of more general intelligence.
 
 <!-- =========================================================== -->
@@ -203,9 +210,14 @@ Scaffold-switch vectors for the remaining benchmark/scaffold-pairs. Each arrow t
 
 ## Ranking Correlation Graphs
 
-How well does a model's ranking on one scaffold predict its ranking on another? The chart below shows Spearman ρ and Kendall τ rank correlations between scaffold pairs for each benchmark. Most pairs preserve ranking moderately well, but CORE-bench Hard (CORE-Agent → Claude Code) is notably *negative* — the best models on one scaffold are not the best on the other.
+How well does a model's ranking on one scaffold predict its ranking on another? The chart below (left) shows Spearman ρ and Kendall τ rank correlations between scaffold pairs for each benchmark. Most pairs preserve ranking moderately well, but CORE-bench Hard (CORE-Agent → Claude Code) is notably negative — the best models on one scaffold are not the best on the other. Zooming in on GAIA (right) with τ=0.17, only about a 58% chance that any two models keep their relative order across scaffolds. Points on the green diagonal kept their ranking; the reds (e.g. DeepSeek V3, o3 Medium) jump far off it.
 
-![Rank-order preservation across scaffolds](figures/rank_correlation_summary.png)
+<p align="center">
+  <img src="figures/rank_scatter_gaia.png" width="480">
+</p>
+<p align="center">
+  <img src="figures/rank_correlation_summary.png" width="780">
+</p>
 
 <!-- ==============================================
 Junk :

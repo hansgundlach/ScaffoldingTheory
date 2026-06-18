@@ -8,6 +8,7 @@ change when switching scaffolds, plus compute rank correlation statistics.
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.lines import Line2D
 import numpy as np
 import re
 from pathlib import Path
@@ -46,6 +47,26 @@ def normalize_model(s):
     s = re.sub(r"\s+High\b", "", s)
     s = re.sub(r"\s*\(.*?\)", "", s)
     return s.strip()
+
+
+def short_model(s):
+    """Compact model label for crowded small-multiple panels."""
+    s = str(s)
+    repl = {
+        "Claude Opus": "Opus", "Claude Sonnet": "Sonnet", "Claude": "Claude",
+        "DeepSeek": "DS", "Gemini": "Gem", " Medium": " M", " Low": " L",
+        "GPT-": "GPT", "o4-mini": "o4m", "o3-mini": "o3m",
+    }
+    for k, v in repl.items():
+        s = s.replace(k, v)
+    return s.strip()
+
+
+def short_scaffold(s):
+    """Compact scaffold label for axis ticks."""
+    s = str(s)
+    s = s.replace("HAL Generalist Agent", "HAL Gen").replace("Agent", "").strip()
+    return s
 
 
 def load_hal(filename, model_col="Primary Model"):
@@ -89,6 +110,8 @@ for i, m in enumerate(ALL_MODELS):
 
 # Collect stats for summary
 stats_rows = []
+# Collect per-pair rank data for the small-multiple grids
+pair_records = []
 
 # ─── Per-benchmark bump charts ──────────────────────────────────────────────
 for fname, title, mcol in BENCHMARKS:
@@ -123,6 +146,14 @@ for fname, title, mcol in BENCHMARKS:
                 "benchmark": title, "scaffold_1": s1, "scaffold_2": s2,
                 "n_shared": n, "spearman_rho": rho, "spearman_p": rho_p,
                 "kendall_tau": tau, "kendall_p": tau_p,
+            })
+
+            pair_records.append({
+                "benchmark": title, "scaffold_1": s1, "scaffold_2": s2,
+                "n_shared": n, "spearman_rho": rho, "kendall_tau": tau,
+                "models": list(shared),
+                "rank1": [int(df1.loc[m, "rank"]) for m in shared],
+                "rank2": [int(df2.loc[m, "rank"]) for m in shared],
             })
 
             # ── Bump chart ──
@@ -261,3 +292,192 @@ if len(stats_df) > 0:
         print(f"  {r['benchmark']:25s}  {r['scaffold_1']:25s} → {r['scaffold_2']:25s}  "
               f"n={r['n_shared']:2d}  ρ={r['spearman_rho']:+.2f} (p={r['spearman_p']:.3f})  "
               f"τ={r['kendall_tau']:+.2f} (p={r['kendall_p']:.3f})")
+
+
+# ─── Grid 1: Rank-vs-rank scatter small-multiples ───────────────────────────
+# One mini-panel per scaffold pair. x = rank on scaffold 1, y = rank on
+# scaffold 2 (both with rank 1 = best, placed top-left). Points on the
+# identity diagonal = ranking preserved; points on the anti-diagonal = inverted.
+def grid_dims(k, ncols):
+    return (k + ncols - 1) // ncols, ncols
+
+
+if pair_records:
+    ncols = 4
+    nrows, ncols = grid_dims(len(pair_records), ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3.4, nrows * 3.5))
+    axes = np.atleast_1d(axes).flatten()
+
+    for idx, rec in enumerate(pair_records):
+        ax = axes[idx]
+        n = rec["n_shared"]
+        r1 = np.array(rec["rank1"])
+        r2 = np.array(rec["rank2"])
+        tau = rec["kendall_tau"]
+
+        # Identity (preserved) reference line
+        ax.plot([1, n], [1, n], color="tab:green", lw=1.5, alpha=0.5,
+                ls="--", zorder=1)
+        # Anti-diagonal (full inversion) reference line
+        ax.plot([1, n], [n, 1], color="tab:red", lw=1.2, alpha=0.35,
+                ls=":", zorder=1)
+
+        for m, a, b in zip(rec["models"], r1, r2):
+            if b < a:
+                c = "tab:green"      # rank improved
+            elif b > a:
+                c = "tab:red"        # rank worsened
+            else:
+                c = "gray"
+            ax.scatter(a, b, s=55, c=c, edgecolors="white", linewidths=0.6,
+                       zorder=3, alpha=0.9)
+            ax.annotate(short_model(m), (a, b), textcoords="offset points",
+                        xytext=(4, 3), fontsize=6, color="#333", zorder=4)
+
+        ax.set_xlim(0.5, n + 0.5)
+        ax.set_ylim(0.5, n + 0.5)
+        ax.invert_yaxis()  # rank 1 (best) at top
+        ax.set_aspect("equal", adjustable="box")
+        ax.set_xticks(range(1, n + 1))
+        ax.set_yticks(range(1, n + 1))
+        ax.tick_params(labelsize=7)
+        ax.set_xlabel(f"rank: {short_scaffold(rec['scaffold_1'])}", fontsize=8)
+        ax.set_ylabel(f"rank: {short_scaffold(rec['scaffold_2'])}", fontsize=8)
+        tcol = "tab:red" if tau < 0 else "#222"
+        ax.set_title(f"{rec['benchmark']}\nτ={tau:+.2f}  (n={n})",
+                     fontsize=8.5, fontweight="bold", color=tcol)
+        ax.grid(True, alpha=0.2)
+
+    for j in range(len(pair_records), len(axes)):
+        axes[j].axis("off")
+
+    # Shared legend
+    legend_elements = [
+        Line2D([0], [0], color="tab:green", ls="--", lw=1.5, label="Preserved order (diagonal)"),
+        Line2D([0], [0], color="tab:red", ls=":", lw=1.2, label="Inverted order (anti-diagonal)"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="tab:green", markersize=8, label="Model rank improved"),
+        Line2D([0], [0], marker="o", color="w", markerfacecolor="tab:red", markersize=8, label="Model rank worsened"),
+    ]
+    fig.legend(handles=legend_elements, loc="lower center", ncol=4, fontsize=9,
+               framealpha=0.9, bbox_to_anchor=(0.5, -0.01))
+    fig.suptitle("Rank vs. Rank Across Scaffolds\n(points on the green diagonal kept their ranking; "
+                 "points toward the red anti-diagonal flipped)",
+                 fontsize=13, fontweight="bold")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
+    fig.savefig(BASE / "figures" / "rank_scatter_grid.png", dpi=150, bbox_inches="tight")
+    print("Saved: rank_scatter_grid.png")
+    plt.close(fig)
+
+
+# ─── Grid 2: Compact bump-chart small-multiples ─────────────────────────────
+# One mini bump chart per scaffold pair. Crossing lines = ranking reshuffled.
+if pair_records:
+    ncols = 4
+    nrows, ncols = grid_dims(len(pair_records), ncols)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3.4, nrows * 3.8))
+    axes = np.atleast_1d(axes).flatten()
+
+    for idx, rec in enumerate(pair_records):
+        ax = axes[idx]
+        n = rec["n_shared"]
+        tau = rec["kendall_tau"]
+
+        for m, a, b in zip(rec["models"], rec["rank1"], rec["rank2"]):
+            if b < a:
+                lc, la = "tab:green", 0.75
+            elif b > a:
+                lc, la = "tab:red", 0.75
+            else:
+                lc, la = "gray", 0.4
+            ax.plot([0, 1], [a, b], color=lc, lw=2.0, alpha=la, zorder=2)
+            mc = MODEL_COLORS.get(m, "gray")
+            ax.scatter([0, 1], [a, b], s=40, c=[mc], zorder=3,
+                       edgecolors="white", linewidths=0.5)
+            # Label only on the left to keep panels readable
+            ax.text(-0.05, a, short_model(m), ha="right", va="center",
+                    fontsize=6, color=mc, fontweight="bold")
+
+        ax.set_xlim(-0.75, 1.25)
+        ax.set_ylim(n + 0.5, 0.5)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels([short_scaffold(rec["scaffold_1"]),
+                            short_scaffold(rec["scaffold_2"])],
+                           fontsize=7.5, fontweight="bold")
+        ax.set_yticks(range(1, n + 1))
+        ax.tick_params(axis="y", labelsize=7)
+        tcol = "tab:red" if tau < 0 else "#222"
+        ax.set_title(f"{rec['benchmark']}\nτ={tau:+.2f}  (n={n})",
+                     fontsize=8.5, fontweight="bold", color=tcol)
+        ax.grid(True, axis="y", alpha=0.2)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        if idx % ncols == 0:
+            ax.set_ylabel("Rank (1 = best)", fontsize=8)
+
+    for j in range(len(pair_records), len(axes)):
+        axes[j].axis("off")
+
+    legend_elements = [
+        mpatches.Patch(color="tab:green", alpha=0.75, label="Rank improved"),
+        mpatches.Patch(color="tab:red", alpha=0.75, label="Rank worsened"),
+        mpatches.Patch(color="gray", alpha=0.4, label="Rank unchanged"),
+    ]
+    fig.legend(handles=legend_elements, loc="lower center", ncol=3, fontsize=9,
+               framealpha=0.9, bbox_to_anchor=(0.5, -0.01))
+    fig.suptitle("Rank Reshuffling Across Scaffolds\n(more crossing lines = less rank preservation)",
+                 fontsize=13, fontweight="bold")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.97])
+    fig.savefig(BASE / "figures" / "rank_bump_grid.png", dpi=150, bbox_inches="tight")
+    print("Saved: rank_bump_grid.png")
+    plt.close(fig)
+
+
+# ─── Standalone focus figure: GAIA rank-vs-rank scatter ─────────────────────
+gaia_rec = next((r for r in pair_records if r["benchmark"] == "GAIA"), None)
+if gaia_rec is not None:
+    n = gaia_rec["n_shared"]
+    tau = gaia_rec["kendall_tau"]
+    rho = gaia_rec["spearman_rho"]
+    concord = (tau + 1) / 2  # exact: chance a random model pair keeps its order
+
+    fig, ax = plt.subplots(figsize=(7.5, 7.5))
+
+    ax.plot([1, n], [1, n], color="tab:green", lw=2.0, alpha=0.55, ls="--",
+            zorder=1, label="Preserved order")
+    ax.plot([1, n], [n, 1], color="tab:red", lw=1.6, alpha=0.4, ls=":",
+            zorder=1, label="Inverted order")
+
+    for m, a, b in zip(gaia_rec["models"], gaia_rec["rank1"], gaia_rec["rank2"]):
+        if b < a:
+            c = "tab:green"
+        elif b > a:
+            c = "tab:red"
+        else:
+            c = "gray"
+        ax.scatter(a, b, s=140, c=c, edgecolors="white", linewidths=1.0,
+                   zorder=3, alpha=0.9)
+        ax.annotate(short_model(m), (a, b), textcoords="offset points",
+                    xytext=(7, 5), fontsize=9, color="#222", fontweight="bold",
+                    zorder=4)
+
+    ax.set_xlim(0.5, n + 0.5)
+    ax.set_ylim(0.5, n + 0.5)
+    ax.invert_yaxis()
+    ax.set_aspect("equal", adjustable="box")
+    ax.set_xticks(range(1, n + 1))
+    ax.set_yticks(range(1, n + 1))
+    ax.tick_params(labelsize=10)
+    ax.set_xlabel(f"Rank on {gaia_rec['scaffold_1']}", fontsize=12, fontweight="bold")
+    ax.set_ylabel(f"Rank on {gaia_rec['scaffold_2']}", fontsize=12, fontweight="bold")
+    ax.set_title(f"GAIA: Model Rank Across Scaffolds\n"
+                 f"Spearman ρ={rho:.2f}, Kendall τ={tau:.2f}  →  "
+                 f"~{concord*100:.0f}% chance a model pair keeps its order",
+                 fontsize=12.5, fontweight="bold")
+    ax.grid(True, alpha=0.25)
+    ax.legend(fontsize=10, loc="upper right", framealpha=0.9)
+
+    fig.tight_layout()
+    fig.savefig(BASE / "figures" / "rank_scatter_gaia.png", dpi=150, bbox_inches="tight")
+    print("Saved: rank_scatter_gaia.png")
+    plt.close(fig)
