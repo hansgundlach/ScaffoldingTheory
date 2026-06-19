@@ -2,3 +2,7 @@
 notmainpost.md
 /transcipt_analysis/
 claude_self.md
+
+# Ensure these Markdown files are not synced
+notmainpost.md
+claude_self.md
