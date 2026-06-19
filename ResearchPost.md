@@ -1,6 +1,8 @@
 
 # Just a Wrapper?
 
+**Authors:** Hans Gundlach, Zachary Brown, and Jayson Lynch
+
 <!-- This is for a technical ish blog post on FutureTech's substack Mixture of Experts. Similar level to some of Epoch's Gradient updates -->
 
 <!-- Behind Every Great Model is a great scaffold  -->
@@ -15,7 +17,7 @@
 - Specialist scaffolding improvements can be significant and can represent as much as two years' worth of algorithmic progress in a given domain over generalist scaffolding.
 - The effect of scaffolding is model-dependent: some models benefit from a given scaffold, while others may be hindered. They, therefore represent a unique case of AI enhancement/algorithmic progress.
 - These scaffold-model interactions have important implications for comparing evaluation, performance, ranking models and understanding the agentic economy.
-- In particular, dowstream builders can signficantly improve performance. However, model creators have a unique advantage to improve peformance on agentic systems built on their models.
+- In particular, dowstream builders can signficantly improve performance. However, model creators may have a unique advantage to improve peformance on agentic systems built on their models.
 
 When we think about what drives AI progress, we usually point to pretraining, reinforcement learning, and inference-time efficiency. Scaffolding — everything wrapped around the model to turn it into an agent — gets far less attention, even as it plays a growing role in how systems actually perform. If we want a full picture of what drives progress in language models, we need to understand scaffolding too. This post tries to get a handle on its effects using data from the Holistic Agent Leaderboard (HAL).
 HAL is an index of model performance on agentic benchmarks, reporting both accuracy and cost. HAL bench includes many agnetic benchmarks including AssistantBench, CORE-Bench HArd, GAIA, Online Mind2Web, SWE-bench Verified Mini, Scicode, ScienceAgentBench,  TAU-bench Airline, and USACO. These cover areas in software engineering, browser use, and agentic search. What makes it useful here is that it runs each model under multiple scaffolds per benchmark — typically a benchmark-specific scaffold alongside a general-purpose one. On CORE-Bench, for instance, models run under both the CORE-agent scaffold and the HAL generalist scaffold. The generalist scaffold is built on the smolagents framework: the model takes every action by writing Python code, so it "searches the internet," for example, by writing and running code that performs the search.
@@ -82,10 +84,12 @@ Scaffolding effect can be so large that in some cases it makes more sense to ben
 
 The scaffold-switch vectors below trace the same model moving between two scaffolds — each arrow points from one scaffold's (cost, accuracy) to another's, colored by whether the switch made the model more/less accurate and more/less expensive.
 
-<table><tr>
-<td><img src="figures/hal_vectors_gaia__hal_generalist_agent_vs_hf_open_deep_research.png" width="100%"></td>
-<td><img src="figures/hal_vectors_sciagentbench__hal_generalist_agent_vs_sab_self_debug.png" width="100%"></td>
-</tr></table>
+<p align="center">
+  <img src="figures/hal_vectors_gaia__hal_generalist_agent_vs_hf_open_deep_research.png" width="60%">
+</p>
+<p align="center">
+  <img src="figures/hal_vectors_sciagentbench__hal_generalist_agent_vs_sab_self_debug.png" width="60%">
+</p>
 
 <sub><i>
 **Left:** Switching scaffolds on the GAIA benchmark produces highly varied effects—some models become both cheaper and more accurate, while others see reduced accuracy, increased cost, or both.
@@ -103,6 +107,10 @@ Here we see that scaffolding has signficiatn interaction effects particular, par
 If scaffolds have non-uniform effects, a model ranked 20th under one scaffold could place 3rd under another. This is a problem because model leaderboards are usually trying to measure one of two things: how models perform in deployment, or their maximum capability. Scaffold non-uniformity pulls these apart. A deployment-oriented leaderboard should fix the scaffold people actually use; a capability-oriented one should run each model under several scaffolds and take the best. A single fixed-scaffold ranking serves neither cleanly.
 We include a formal analysis of scaffold effects on ranking in the appendix. On some benchmarks — SciCode, for instance — rankings are largely preserved across scaffolds (high rank correlation). But on most, rank-preservation measures show substantial reordering: the leaderboard you get depends heavily on the scaffold you chose to run.
 
+<p align="center"><img src="figures/rank_bump_swe_bench_mini_verified_hal_generalist_agent_swe_agent.png" width="700"></p>
+<sub><i>
+Ranking can vary significantly between scafolds. Green line represent modles that improved in rank moving the hal generalist agent, while red lines represent models that decreased in rank when switching from hal generlist to swe-agent harness. 
+</i></sub>
 <!-- 
 If scaffold have nonuniform effects than a modle that is 20th place for one scaffold could be 3rd place for another. Given that model leaderboards aim to capture either the performance of modles in deployment or the maximum capabilites of models. It may be necessary to run the model on several scaffodls and take the maximum performance or determine which scaffolds most match actual deployment. 
 Even further, the effect of scaffolding can be so large that evaluators shoudl create leaderboards of scaffolds rather than leaderboards of models per se. We include in the appendix our formal analysis of the effect of model scaffold on ranking by benchmarks. For some benchamakrs such as SciCode we see signficant rankign correlation between scaffolds. However, for most scaffolds measures of ranking preservation indicate large changes.  -->
@@ -112,7 +120,7 @@ Even further, the effect of scaffolding can be so large that evaluators shoudl c
 
 ## Caveats
 
-While scaffolding is important we do not want to overestimate it. While we think the HAL generalist scaffold has a wide range of affordances and represents a decient scaffold. If we used a baseline which did not allow for tool calls for example we would attribute much larger gains to scaffolding. Our study does not imply that further scaffolding improvments would yield equivalent 100x gains. However, it does suggest there signficant potential for "unhobbling" in models.
+While scaffolding is important we do not want to overestimate it. While we think the HAL generalist scaffold has a wide range of affordances and represents a decient scaffold. If we used a baseline which did not allow for tool calls for example we would attribute much larger gains to scaffolding. Our study does not imply that further scaffolding improvments would yield equivalent 100x gains. However, it does suggest there is signficant potential for "unhobbling" in models.
 
 <!-- =======================================
 
@@ -146,7 +154,8 @@ Random Modles on Claude Code Harness vs on regular hanress
 # What Does Scaffolding Mean For the Agent Economy ?
 
 The interactions effects between models and harnesses and Claude's exceptional performance raise interesting questions about the downstream development of AI agents. On one side,the power of agnet harnesses points to the potential for downstream individuals and organizations to gain a durable advantage. These wrapper companies will be able to elicit performance that models will not be able to without signifcantly greater compute and interest.
-However, we believe that scaffolding will in fact give model creators a decisive advantage over downstream groups. Scafolding demonstrates that "algorithmic improvements" can be restricted to certained models rather than be broadly available. Model creators will have unique cointegration benefits that downstream providers will not be able to access. For instance, claude can be specificaly trained on claude code harness. This copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research.  Further, claude's might have limited interoperability with other agentic harnesses nad downstream applications.
+However, we believe that scaffolding will in fact give model creators a decisive advantage over downstream groups. Scafolding demonstrates that "algorithmic improvements" can be restricted to certained models rather than be broadly available. Model creators will have unique cointegration benefits that downstream providers will not be able to access. For instance, claude can be specificaly trained on claude code harness. This copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research.  Further, claude's might have limited interoperability with other agentic harnesses nad downstream applications. While downstream agent developers without control over models might see their performance decrease rather than increase with new modles (see how swe-agent harness decreasing performance for some models).
+
 In the same way, Apple is able to preferential benefits its applications rather than other providers applications on its app store. In the same way, claude will be able to prioritize the downstream frameworks it wants to succeeed. This makes it more likely that AI creators may have a greater monopoly over the ecosystem then previously realized.
 
 <!-- Further, the interactions effects point to deeper structural issues that may effect the AI ecosystem. AI createros have a unique ability to determine what downstream services will succeeed and which will fail. Further, this copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research. 
@@ -218,6 +227,10 @@ How well does a model's ranking on one scaffold predict its ranking on another? 
 <p align="center">
   <img src="figures/rank_correlation_summary.png" width="780">
 </p>
+
+## Code and Data
+All data was scraped from the publicly available [HAL leaderboard](https://hal.cs.princeton.edu/).
+The code for generating graphs and doing analysis is here: 
 
 <!-- ==============================================
 Junk :
