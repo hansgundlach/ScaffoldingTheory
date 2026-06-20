@@ -8,6 +8,7 @@
 <!-- Behind Every Great Model is a great scaffold  -->
 <!-- If Claude has seen futher, it has been on the sholder of scaffolds -->
 <!-- Ask not what your scaffodl can do for your modle but what your model can do for your scaffold  -->
+<!-- Zen and the ARt of Scaffolding -->
 
 > I am the shape the water takes.  
 > — ClawdBot, [Moltbook](https://www.astralcodexten.com/p/best-of-moltbook?hide_intro_popup=true)
@@ -107,9 +108,9 @@ Here we see that scaffolding has signficiatn interaction effects particular, par
 If scaffolds have non-uniform effects, a model ranked 20th under one scaffold could place 3rd under another. This is a problem because model leaderboards are usually trying to measure one of two things: how models perform in deployment, or their maximum capability. Scaffold non-uniformity pulls these apart. A deployment-oriented leaderboard should fix the scaffold people actually use; a capability-oriented one should run each model under several scaffolds and take the best. A single fixed-scaffold ranking serves neither cleanly.
 We include a formal analysis of scaffold effects on ranking in the appendix. On some benchmarks — SciCode, for instance — rankings are largely preserved across scaffolds (high rank correlation). But on most, rank-preservation measures show substantial reordering: the leaderboard you get depends heavily on the scaffold you chose to run.
 
-<p align="center"><img src="figures/rank_bump_swe_bench_mini_verified_hal_generalist_agent_swe_agent.png" width="700"></p>
+<p align="center"><img src="figures/rank_bump_swe_bench_mini_verified_hal_generalist_agent_swe_agent.png" width="600"></p>
 <sub><i>
-Ranking can vary significantly between scafolds. Green line represent modles that improved in rank moving the hal generalist agent, while red lines represent models that decreased in rank when switching from hal generlist to swe-agent harness. 
+Ranking can vary significantly between scafolds. Green line represent modles that improved in rank moving the hal generalist agent, while red lines represent models that decreased in rank when switching from hal generlist to swe-agent harness.
 </i></sub>
 <!-- 
 If scaffold have nonuniform effects than a modle that is 20th place for one scaffold could be 3rd place for another. Given that model leaderboards aim to capture either the performance of modles in deployment or the maximum capabilites of models. It may be necessary to run the model on several scaffodls and take the maximum performance or determine which scaffolds most match actual deployment. 
@@ -149,8 +150,6 @@ Random Modles on Claude Code Harness vs on regular hanress
 
 =========================================== -->
 
-
-
 # What Does Scaffolding Mean For the Agent Economy ?
 
 The interactions effects between models and harnesses and Claude's exceptional performance raise interesting questions about the downstream development of AI agents. On one side,the power of agnet harnesses points to the potential for downstream individuals and organizations to gain a durable advantage. These wrapper companies will be able to elicit performance that models will not be able to without signifcantly greater compute and interest.
@@ -161,13 +160,11 @@ In the same way, Apple is able to preferential benefits its applications rather 
 <!-- Further, the interactions effects point to deeper structural issues that may effect the AI ecosystem. AI createros have a unique ability to determine what downstream services will succeeed and which will fail. Further, this copoptimization gives them the potential for much higher capabilites in critical abilies like software development and AI research. 
  -->
 
-
-
  <!-- Too much attnetion is payed to the Evaluation AI and not much is payed to evluating the system AI is embeeded in. A good AI may become evil in bad circumstances and vice versa.  -->
 
 # Conclusion and The Future of AI Capabilities
 
-I think the complexities aroudn scaffolding  point to a larger point that AI capabilties are increasingly not being driven by the modles themselves but by the systems that they are embedded in. AI capabilties cannot be measurd in isolation. We should aim to not only evaluate AIs but the systems they are embedded in. A good AI may become evil in bad circumstances and vice versa. 
+I think the complexities aroudn scaffolding  point to a larger point that AI capabilties are increasingly not being driven by the modles themselves but by the systems that they are embedded in. AI capabilties cannot be measurd in isolation. We should aim to not only evaluate AIs but the systems they are embedded in. A good AI may become evil in bad circumstances and vice versa.
 Agentic harnesses are one layer in this new structure but we will eventually need to account for the abilties of multiagent networks which will depend on much more complicated infrastrcture. Such structures may have complicated weight sharing and interactions that we cannot currently imagine.
 These systems will continuely blurr the line betwene what is and is not an AI. We will need to change how we account for the capabilites of more general intelligence.
 
@@ -188,7 +185,7 @@ To quantify how much of the spread in agent accuracy comes from the *model* vers
 
 Per-scaffold price–performance frontiers across all benchmarks. Each panel plots final accuracy (logit-scaled) against the API cost needed to reach it, with one frontier per scaffold.
 
-<p align="center"><img src="figures/hal_price_performance_frontier.png" width="900"></p>
+<p align="center"><img src="figures/hal_price_performance_frontier.png" width="700"></p>
 
 ## Full Vector Analysis Graphs
 
@@ -221,8 +218,6 @@ Scaffold-switch vectors for the remaining benchmark/scaffold-pairs. Each arrow t
 
 How well does a model's ranking on one scaffold predict its ranking on another? The chart below (left) shows Spearman ρ and Kendall τ rank correlations between scaffold pairs for each benchmark. Most pairs preserve ranking moderately well, but CORE-bench Hard (CORE-Agent → Claude Code) is notably negative — the best models on one scaffold are not the best on the other. Zooming in on GAIA (right) with τ=0.17, only about a 58% chance that any two models keep their relative order across scaffolds. Points on the green diagonal kept their ranking; the reds (e.g. DeepSeek V3, o3 Medium) jump far off it.
 
-Both measures run from −1 (rankings exactly reversed) through 0 (no association) to +1 (identical rankings). **Spearman's ρ** is the Pearson correlation applied to the models' rank positions rather than their raw scores: take each model's rank under scaffold A and its rank under scaffold B, and measure how linearly those two sets of rank numbers track each other. Because it works on the rank values, ρ is sensitive to *how far* a model moves — a model that falls from 2nd to 18th drags ρ down more than one that slips from 2nd to 4th. **Kendall's τ**, by contrast, only counts whether each *pair* of models keeps the same order, ignoring the size of the move, which is why it tends to be smaller in magnitude and maps cleanly onto the "58% chance of preserved order" reading above. We report both because they answer slightly different questions: ρ captures the overall distortion of the leaderboard, while τ captures how often any two models swap places.
-
 <p align="center">
   <img src="figures/rank_scatter_gaia.png" width="480">
 </p>
@@ -231,8 +226,9 @@ Both measures run from −1 (rankings exactly reversed) through 0 (no associatio
 </p>
 
 ## Code and Data
+
 All data was scraped from the publicly available [HAL leaderboard](https://hal.cs.princeton.edu/).
-The code for generating graphs and doing analysis is here: 
+The code for generating graphs and doing analysis is here: [Github](https://github.com/hansgundlach/ScaffoldingTheory)
 
 <!-- ==============================================
 Junk :

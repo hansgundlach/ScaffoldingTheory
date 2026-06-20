@@ -23,37 +23,37 @@ EPOCH_STYLE = False           # also render Epoch-AI-styled vector plots (hal_ve
 # All styling knobs live here. Bump these to make text/markers larger.
 SAVE_DPI = 150
 
-# Overview grid figure (2 x 4 of all benchmarks)
-GRID_FIGSIZE = (30, 15)
-GRID_SUPTITLE_FONTSIZE = 24
-GRID_TITLE_FONTSIZE = 18
-GRID_LABEL_FONTSIZE = 16
-GRID_TICK_FONTSIZE = 14
-GRID_ANNOT_FONTSIZE = 8
-GRID_LEGEND_FONTSIZE = 11
+# Overview grid figure (4 rows x 2 cols of all benchmarks)
+GRID_FIGSIZE = (17, 32)
+GRID_SUPTITLE_FONTSIZE = 30
+GRID_TITLE_FONTSIZE = 23
+GRID_LABEL_FONTSIZE = 21
+GRID_TICK_FONTSIZE = 18
+GRID_ANNOT_FONTSIZE = 9
+GRID_LEGEND_FONTSIZE = 16
 GRID_POINT_SIZE = 90
 GRID_LINEWIDTH = 2
 
 # Individual per-benchmark frontier figures
 IND_FIGSIZE = (13, 8)
-IND_TITLE_FONTSIZE = 22
-IND_LABEL_FONTSIZE = 19
-IND_TICK_FONTSIZE = 16
+IND_TITLE_FONTSIZE = 23
+IND_LABEL_FONTSIZE = 23
+IND_TICK_FONTSIZE = 20
 IND_ANNOT_FONTSIZE = 12
-IND_LEGEND_FONTSIZE = 14
+IND_LEGEND_FONTSIZE = 18
 IND_POINT_SIZE = 130
 IND_LINEWIDTH = 2.5
 
 # Scaffold-switch vector figures
 VEC_FIGSIZE = (17, 11)
 VEC_TITLE_FONTSIZE = 24
-VEC_LABEL_FONTSIZE = 21
-VEC_TICK_FONTSIZE = 18
+VEC_LABEL_FONTSIZE = 26
+VEC_TICK_FONTSIZE = 23
 VEC_ANNOT_FONTSIZE = 15
-VEC_LEGEND_FONTSIZE = 16
-VEC_LEGEND_TITLE_FONTSIZE = 17
-VEC_ARROW_LW = 3.5
-VEC_ARROW_MUTATION = 34
+VEC_LEGEND_FONTSIZE = 21
+VEC_LEGEND_TITLE_FONTSIZE = 22
+VEC_ARROW_LW = 5.5
+VEC_ARROW_MUTATION = 55
 VEC_POINT_SIZE = 140
 VEC_POINT_ALPHA = 0.45
 
@@ -157,9 +157,9 @@ BENCHMARKS = [
 LINESTYLES = ["-", "--", "-.", ":"]
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
-fig, axes = plt.subplots(2, 4, figsize=GRID_FIGSIZE)
+fig, axes = plt.subplots(4, 2, figsize=GRID_FIGSIZE)
 fig.suptitle("HAL Benchmarks: Per-Scaffold Pareto Frontiers\n(y-axis = logit of accuracy, x-axis = log cost)",
-             fontsize=GRID_SUPTITLE_FONTSIZE, fontweight="bold")
+             fontsize=GRID_SUPTITLE_FONTSIZE, fontweight="bold", y=0.995)
 
 for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
     ax = axes.flat[idx]
@@ -217,7 +217,7 @@ for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
     ax.legend(by_label.values(), by_label.keys(), fontsize=GRID_LEGEND_FONTSIZE, loc="lower right",
               framealpha=0.8)
 
-plt.tight_layout()
+plt.tight_layout(rect=[0, 0, 1, 0.975])
 plt.savefig(BASE / "figures" / "hal_price_performance_frontier.png", dpi=SAVE_DPI, bbox_inches="tight")
 plt.savefig(BASE / "figures" / "hal_price_performance_frontier.pdf", bbox_inches="tight")
 print("Saved: hal_price_performance_frontier.png/pdf")
@@ -467,7 +467,7 @@ def render_vector_figure(fname, title, mcol, style="default", pair=None):
     legend_order = ["more_acc_less_exp", "more_acc_more_exp",
                     "less_acc_less_exp", "less_acc_more_exp"]
     legend_handles = [
-        plt.Line2D([], [], color=quad_colors[q], lw=4, label=QUADRANT_LABELS[q])
+        plt.Line2D([], [], color=quad_colors[q], lw=6, label=QUADRANT_LABELS[q])
         for q in legend_order if q in used_quadrants
     ]
 

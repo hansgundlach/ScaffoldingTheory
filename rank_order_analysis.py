@@ -134,9 +134,10 @@ for fname, title, mcol in BENCHMARKS:
             df1 = df1[df1["model_norm"].isin(shared)].set_index("model_norm")
             df2 = df2[df2["model_norm"].isin(shared)].set_index("model_norm")
 
-            # Rank: 1 = best
-            df1["rank"] = df1["accuracy"].rank(ascending=False, method="min").astype(int)
-            df2["rank"] = df2["accuracy"].rank(ascending=False, method="min").astype(int)
+            # Rank: 1 = best. Use method="first" so tied accuracies still get
+            # distinct sequential ranks (no gaps, no models stacked on one rank).
+            df1["rank"] = df1["accuracy"].rank(ascending=False, method="first").astype(int)
+            df2["rank"] = df2["accuracy"].rank(ascending=False, method="first").astype(int)
 
             n = len(shared)
             rho, rho_p = spearmanr(df1.loc[shared, "rank"], df2.loc[shared, "rank"])
@@ -206,9 +207,7 @@ for fname, title, mcol in BENCHMARKS:
             ax.set_yticks(range(1, n + 1))
 
             # Stats annotation
-            stats_text = (f"n={n}   Spearman ρ={rho:.2f} (p={rho_p:.3f})"
-                          f"   Kendall τ={tau:.2f} (p={tau_p:.3f})"
-                          f"\n{rank_inversions}/{n} models changed rank")
+            stats_text = f"n={n}   {rank_inversions}/{n} models changed rank"
             ax.set_title(f"{title}: Rank Order Across Scaffolds\n{stats_text}",
                          fontsize=12, fontweight="bold")
 
@@ -218,8 +217,8 @@ for fname, title, mcol in BENCHMARKS:
                 mpatches.Patch(color="tab:red", alpha=0.7, label="Rank worsened"),
                 mpatches.Patch(color="gray", alpha=0.4, label="Rank unchanged"),
             ]
-            ax.legend(handles=legend_elements, fontsize=9, loc="lower center",
-                      ncol=3, framealpha=0.9)
+            ax.legend(handles=legend_elements, fontsize=9, loc="upper center",
+                      bbox_to_anchor=(0.5, -0.08), ncol=3, framealpha=0.9)
 
             ax.grid(True, axis="y", alpha=0.2)
             ax.spines["top"].set_visible(False)
@@ -252,31 +251,15 @@ if len(stats_df) > 0:
     bars_tau = ax_s.barh([y + bar_h/2 for y in y_pos], stats_df["kendall_tau"],
                           height=bar_h, color="tab:orange", alpha=0.75, label="Kendall τ")
 
-    # Value labels — place outside the bar tip on the correct side so negative
-    # bars don't cram their labels against the y-axis / category labels.
-    def label_bars(bars, vals, ps, color):
-        for bar, val, p in zip(bars, vals, ps):
-            sig = "***" if p < 0.001 else "**" if p < 0.01 else "*" if p < 0.05 else ""
-            w = bar.get_width()
-            if w >= 0:
-                x, ha = w + 0.02, "left"
-            else:
-                x, ha = w - 0.02, "right"
-            ax_s.text(x, bar.get_y() + bar.get_height()/2,
-                      f"{val:.2f}{sig}", va="center", ha=ha, fontsize=9, color=color)
-
-    label_bars(bars_rho, stats_df["spearman_rho"], stats_df["spearman_p"], "tab:blue")
-    label_bars(bars_tau, stats_df["kendall_tau"], stats_df["kendall_p"], "tab:orange")
-
     ax_s.set_yticks(list(y_pos))
     ax_s.set_yticklabels(labels, fontsize=8)
     ax_s.set_xlabel("Rank Correlation", fontsize=12)
-    ax_s.set_title("Rank-Order Preservation Across Scaffolds\n(* p<0.05, ** p<0.01, *** p<0.001)",
+    ax_s.set_title("Rank-Order Preservation Across Scaffolds",
                     fontsize=13, fontweight="bold")
     ax_s.axvline(x=0, color="black", linewidth=0.8)
     ax_s.axvline(x=1, color="gray", linewidth=0.5, linestyle=":")
     ax_s.set_xlim(-0.55, 1.3)
-    ax_s.legend(fontsize=10, loc="lower right")
+    ax_s.legend(fontsize=10, loc="lower left")
     ax_s.grid(True, axis="x", alpha=0.3)
     ax_s.invert_yaxis()
 
@@ -471,11 +454,11 @@ if gaia_rec is not None:
     ax.set_xlabel(f"Rank on {gaia_rec['scaffold_1']}", fontsize=12, fontweight="bold")
     ax.set_ylabel(f"Rank on {gaia_rec['scaffold_2']}", fontsize=12, fontweight="bold")
     ax.set_title(f"GAIA: Model Rank Across Scaffolds\n"
-                 f"Spearman ρ={rho:.2f}, Kendall τ={tau:.2f}  →  "
                  f"~{concord*100:.0f}% chance a model pair keeps its order",
                  fontsize=12.5, fontweight="bold")
     ax.grid(True, alpha=0.25)
-    ax.legend(fontsize=10, loc="upper right", framealpha=0.9)
+    ax.legend(fontsize=10, loc="upper right", bbox_to_anchor=(1.0, 0.90),
+              framealpha=0.9)
 
     fig.tight_layout()
     fig.savefig(BASE / "figures" / "rank_scatter_gaia.png", dpi=150, bbox_inches="tight")
