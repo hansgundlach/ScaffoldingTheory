@@ -232,7 +232,7 @@ Both measures run from −1 (rankings exactly reversed) through 0 (no associatio
 
 ## Code and Data
 All data was scraped from the publicly available [HAL leaderboard](https://hal.cs.princeton.edu/).
-The code for generating graphs and doing analysis is here: 
+The code for generating graphs and doing analysis is here: [Github](https://github.com/hansgundlach/ScaffoldingTheory).
 
 <!-- ==============================================
 Junk :
@@ -263,7 +263,7 @@ Patch submission format
 Post-processing of diffs
 Evaluation harness
 Caching strategy -->
--
+
 <!-- 
 
 # Does Scaffolding Matter Less At Higher Capabilities

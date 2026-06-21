@@ -5,6 +5,7 @@ Price vs Performance (logit-scaled) frontier plots from HAL benchmark data.
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mticker
+from matplotlib.transforms import Bbox
 import numpy as np
 import re
 from pathlib import Path
@@ -49,7 +50,7 @@ VEC_FIGSIZE = (17, 11)
 VEC_TITLE_FONTSIZE = 24
 VEC_LABEL_FONTSIZE = 26
 VEC_TICK_FONTSIZE = 23
-VEC_ANNOT_FONTSIZE = 15
+VEC_ANNOT_FONTSIZE = 19
 VEC_LEGEND_FONTSIZE = 21
 VEC_LEGEND_TITLE_FONTSIZE = 22
 VEC_ARROW_LW = 5.5
@@ -354,6 +355,86 @@ def slugify(s):
     return re.sub(r"[^a-z0-9]+", "_", str(s).lower()).strip("_")
 
 
+def place_vector_labels(fig, ax, labels, obstacles_xy, fontsize, fontweight="bold"):
+    """Greedy non-overlapping placement of model-name labels for the vector plots.
+
+    For each label we test a ring of candidate offsets around its anchor (the
+    arrow midpoint) — straight up/down first, then out at increasing radius —
+    and keep the first position whose text box collides with neither an
+    already-placed label nor a data point. A thin leader line, colored to match
+    the arrow, is drawn from any displaced label back to its arrow midpoint, so
+    it is always clear which arrow a name belongs to.
+
+    labels:       list of {x, y, text, color, leader} dicts (anchor in data coords).
+    obstacles_xy: (x, y) data points to avoid sitting on (the arrow endpoints).
+    """
+    if not labels:
+        return
+    fig.canvas.draw()  # establish a renderer + final axes geometry
+    renderer = fig.canvas.get_renderer()
+    # Freeze limits so off-axes labels can't rescale the view mid-placement.
+    ax.set_xlim(*ax.get_xlim())
+    ax.set_ylim(*ax.get_ylim())
+    to_disp = ax.transData.transform
+
+    # A semi-transparent white box behind each label keeps it readable wherever
+    # it lands — even on top of an arrow — and gives the placer an honest box to
+    # pack against.
+    label_box = dict(boxstyle="round,pad=0.22", fc="white", ec="0.65",
+                     lw=0.5, alpha=0.82)
+
+    def measure(dx, dy, lb):
+        t = ax.annotate(lb["text"], (lb["x"], lb["y"]), textcoords="offset points",
+                        xytext=(dx, dy), fontsize=fontsize, color=lb["color"],
+                        fontweight=fontweight, ha="center", va="center",
+                        zorder=7, bbox=label_box)
+        bb = t.get_window_extent(renderer).expanded(1.12, 1.45)
+        return t, bb
+
+    # Keep-out boxes: every faint endpoint marker, plus the legend if present.
+    obstacles = []
+    for ox, oy in obstacles_xy:
+        px, py = to_disp((ox, oy))
+        obstacles.append(Bbox.from_bounds(px - 7, py - 7, 14, 14))
+    leg = ax.get_legend()
+    if leg is not None:
+        obstacles.append(leg.get_window_extent(renderer).expanded(1.04, 1.04))
+
+    # Candidate offsets in typographic points: rings of growing radius, with the
+    # natural reading spots (above / below) tried before the diagonals & sides.
+    angles = [90, 270, 40, 140, 320, 220, 0, 180]
+    radii = [16, 26, 38, 52, 70, 92, 118]
+    candidates = [(0.0, 0.0)] + [(r * np.cos(np.radians(a)), r * np.sin(np.radians(a)))
+                                 for r in radii for a in angles]
+
+    placed = []
+    for lb in labels:
+        chosen = None
+        for dx, dy in candidates:
+            t, bb = measure(dx, dy, lb)
+            t.remove()
+            if not any(bb.overlaps(p) for p in placed) and \
+               not any(bb.overlaps(o) for o in obstacles):
+                chosen = (dx, dy, bb)
+                break
+        if chosen is None:               # no clear spot — accept the farthest ring
+            dx, dy = candidates[-1]
+            bb = None
+        else:
+            dx, dy, bb = chosen
+        # Draw the final label (with its background box) plus a leader line back
+        # to the arrow midpoint whenever it was nudged away from it. The leader is
+        # a neutral dark gray so it stays distinct from the thick colored arrows.
+        leader = (dict(arrowstyle="-", color="#333333", lw=1.3, alpha=0.85,
+                       shrinkA=3, shrinkB=5) if float(np.hypot(dx, dy)) >= 8 else None)
+        t = ax.annotate(lb["text"], (lb["x"], lb["y"]), textcoords="offset points",
+                        xytext=(dx, dy), fontsize=fontsize, color=lb["color"],
+                        fontweight=fontweight, ha="center", va="center",
+                        zorder=7, bbox=label_box, arrowprops=leader)
+        placed.append(bb if bb is not None else
+                      t.get_window_extent(renderer).expanded(1.12, 1.45))
+
+
 def render_vector_figure(fname, title, mcol, style="default", pair=None):
     """Render one scaffold-switch vector plot. style is 'default' or 'epoch'.
 
@@ -389,6 +470,8 @@ def render_vector_figure(fname, title, mcol, style="default", pair=None):
     # Arrows are colored by the quadrant they head toward (not by pair).
     used_quadrants = set()
     used_transitions = []  # (s1, s2) pairs that actually had arrows, in order
+    vec_labels = []        # model-name labels, placed later without overlaps
+    vec_points = []        # arrow endpoints, used as label keep-out obstacles
 
     for i in range(len(scaffolds)):
         for j in range(i + 1, len(scaffolds)):
@@ -425,15 +508,15 @@ def render_vector_figure(fname, title, mcol, style="default", pair=None):
                                             connectionstyle="arc3,rad=0.05"),
                             zorder=4)
 
-                # Label at midpoint
+                vec_points.append((x1, y1))
+                vec_points.append((x2, y2))
+
+                # Collect the label; actual placement happens after layout so we
+                # can resolve overlaps and draw leader lines to the right arrow.
                 if SHOW_VECTOR_LABELS:
                     mx, my = (x1 + x2) / 2, (y1 + y2) / 2
-                    ax.annotate(model, (mx, my),
-                                fontsize=VEC_ANNOT_FONTSIZE, color=label_color, alpha=0.95,
-                                fontweight="bold" if not epoch else "medium",
-                                ha="center", va="bottom",
-                                textcoords="offset points", xytext=(0, 5),
-                                zorder=5)
+                    vec_labels.append({"x": mx, "y": my, "text": model,
+                                       "color": label_color, "leader": ac})
 
     # Also scatter all raw points faintly for context
     for scaffold in scaffolds:
@@ -502,6 +585,10 @@ def render_vector_figure(fname, title, mcol, style="default", pair=None):
         suffix = ""
 
     fig_v.tight_layout()
+    # Resolve label overlaps + draw leader lines once the layout is final.
+    place_vector_labels(fig_v, ax, vec_labels, vec_points,
+                        fontsize=VEC_ANNOT_FONTSIZE,
+                        fontweight="bold" if not epoch else "medium")
     safe_name = title.lower().replace(" ", "_").replace("-", "_").replace(".", "")
     if pair is not None:
         pair_slug = f"__{slugify(scaffolds[0])}_vs_{slugify(scaffolds[1])}"
