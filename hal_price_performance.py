@@ -623,4 +623,415 @@ for fname, title, mcol in BENCHMARKS:
             with plt.rc_context(EPOCH_RC):
                 render_vector_figure(fname, title, mcol, style="epoch", pair=pair)
 
+
+# ─── Figure 4: Origin-centered scaffold-switch vectors ───────────────────────
+# Same data as the scaffold-switch arrows, but every arrow is translated so it
+# starts at the origin. (0, 0) is each model's price/accuracy on the *generalist*
+# scaffold; the arrow points to (Δlog cost, Δlogit accuracy) after switching to a
+# specialist scaffold. This collapses every benchmark onto a common reference so
+# the *direction and magnitude* of the scaffold switch is directly comparable.
+
+def get_reference_scaffold(df):
+    """Pick the 'generalist' scaffold to anchor at the origin.
+
+    Prefers a scaffold whose name contains 'generalist'; falls back to a generic
+    browser agent ('Browser-Use') for benchmarks that lack a generalist entry.
+    """
+    scaffolds = list(df["scaffold"].dropna().unique())
+    for s in scaffolds:
+        if "generalist" in s.lower():
+            return s
+    for s in scaffolds:
+        if "browser-use" in s.lower():
+            return s
+    return None
+
+
+def origin_vectors(fname, mcol):
+    """Compute origin-anchored switch vectors for one benchmark.
+
+    Returns (ref_scaffold, list_of_vectors). Each vector is a dict with
+    dx (Δlog10 cost), dy (Δlogit accuracy), quadrant, target scaffold, and model.
+    """
+    df = load_hal(fname, mcol)
+    df["model_norm"] = df["Model"].apply(normalize_model_name)
+    ref = get_reference_scaffold(df)
+    if ref is None:
+        return None, []
+
+    ref_df = df[df["scaffold"] == ref]
+    # Best-accuracy generalist point per model = origin reference.
+    refmap = {}
+    for model, rows in ref_df.groupby("model_norm"):
+        r = rows.loc[rows["accuracy"].idxmax()]
+        refmap[model] = (np.log10(r["cost"]), logit_score(r["accuracy"]))
+
+    vectors = []
+    for s in sorted(df["scaffold"].dropna().unique()):
+        if s == ref:
+            continue
+        sdf = df[df["scaffold"] == s]
+        for model, rows in sdf.groupby("model_norm"):
+            if model not in refmap:
+                continue
+            r = rows.loc[rows["accuracy"].idxmax()]
+            x0, y0 = refmap[model]
+            dx = np.log10(r["cost"]) - x0
+            dy = logit_score(r["accuracy"]) - y0
+            vectors.append({"dx": dx, "dy": dy, "quad": classify_quadrant(dx, dy),
+                            "target": s, "model": model})
+    return ref, vectors
+
+
+def make_cost_mult_formatter():
+    """Format an x value (= Δlog10 cost) as a cost multiplier, e.g. 0.3→'×2'."""
+    def fmt(x, pos):
+        m = 10 ** x
+        if m >= 1:
+            return f"×{m:.2g}"
+        return f"×{m:.2g}"
+    return mticker.FuncFormatter(fmt)
+
+
+def style_origin_axes(ax, vectors, label_fs, tick_fs):
+    """Crosshairs at the origin, faint quadrant tints, symmetric framing."""
+    ax.axhline(0, color="#555", lw=1.4, zorder=1)
+    ax.axvline(0, color="#555", lw=1.4, zorder=1)
+    ax.scatter([0], [0], c="black", s=70, zorder=6, marker="o")
+
+    if vectors:
+        max_x = max(abs(v["dx"]) for v in vectors)
+        max_y = max(abs(v["dy"]) for v in vectors)
+    else:
+        max_x = max_y = 1.0
+    px = max(max_x * 1.18, 0.1)
+    py = max(max_y * 1.18, 0.1)
+    ax.set_xlim(-px, px)
+    ax.set_ylim(-py, py)
+
+    # Faint quadrant tints matching the arrow color semantics.
+    tint = 0.06
+    ax.axhspan(0, py, xmin=0.5, xmax=1.0, color=QUADRANT_COLORS["more_acc_more_exp"], alpha=tint, zorder=0)
+    ax.axhspan(0, py, xmin=0.0, xmax=0.5, color=QUADRANT_COLORS["more_acc_less_exp"], alpha=tint, zorder=0)
+    ax.axhspan(-py, 0, xmin=0.5, xmax=1.0, color=QUADRANT_COLORS["less_acc_more_exp"], alpha=tint, zorder=0)
+    ax.axhspan(-py, 0, xmin=0.0, xmax=0.5, color=QUADRANT_COLORS["less_acc_less_exp"], alpha=tint, zorder=0)
+
+    ax.xaxis.set_major_formatter(make_cost_mult_formatter())
+    ax.set_xlabel("Cost change vs. generalist (×, log scale)", fontsize=label_fs)
+    ax.set_ylabel("Accuracy change vs. generalist (Δ logit)", fontsize=label_fs)
+    ax.tick_params(axis="both", labelsize=tick_fs)
+
+
+# Grid of origin-centered vector plots, one panel per benchmark.
+fig_o, axes_o = plt.subplots(4, 2, figsize=GRID_FIGSIZE)
+fig_o.suptitle("HAL Benchmarks: Origin-Centered Scaffold-Switch Vectors\n"
+               "(origin = each model on the generalist scaffold; arrow = switch to a specialist scaffold)",
+               fontsize=GRID_SUPTITLE_FONTSIZE * 0.85, fontweight="bold", y=0.997)
+
+used_quadrants_all = set()
+for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
+    ax = axes_o.flat[idx]
+    ref, vectors = origin_vectors(fname, mcol)
+    for v in vectors:
+        ac = QUADRANT_COLORS[v["quad"]]
+        used_quadrants_all.add(v["quad"])
+        ax.annotate("", xy=(v["dx"], v["dy"]), xytext=(0, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=ac, lw=GRID_LINEWIDTH + 0.5,
+                                    alpha=0.8, mutation_scale=22,
+                                    connectionstyle="arc3,rad=0.04"), zorder=4)
+    style_origin_axes(ax, vectors, GRID_LABEL_FONTSIZE, GRID_TICK_FONTSIZE)
+    ref_note = f"\n(origin = {ref})" if ref else ""
+    ax.set_title(f"{title}{ref_note}", fontsize=GRID_TITLE_FONTSIZE * 0.8, fontweight="bold")
+    ax.grid(True, alpha=0.25)
+
+legend_order = ["more_acc_less_exp", "more_acc_more_exp", "less_acc_less_exp", "less_acc_more_exp"]
+legend_handles = [plt.Line2D([], [], color=QUADRANT_COLORS[q], lw=6, label=QUADRANT_LABELS[q])
+                  for q in legend_order if q in used_quadrants_all]
+if legend_handles:
+    fig_o.legend(handles=legend_handles, fontsize=GRID_LEGEND_FONTSIZE, loc="lower center",
+                 ncol=2, framealpha=0.9, title="Direction of switch",
+                 title_fontsize=GRID_LEGEND_FONTSIZE)
+plt.tight_layout(rect=[0, 0.03, 1, 0.975])
+fig_o.savefig(BASE / "figures" / "hal_origin_vectors_grid.png", dpi=SAVE_DPI, bbox_inches="tight")
+fig_o.savefig(BASE / "figures" / "hal_origin_vectors_grid.pdf", bbox_inches="tight")
+print("Saved: hal_origin_vectors_grid.png/pdf")
+plt.close(fig_o)
+
+# Individual larger origin-centered figures per benchmark, with model labels.
+for fname, title, mcol in BENCHMARKS:
+    ref, vectors = origin_vectors(fname, mcol)
+    if not vectors:
+        continue
+    fig_i, ax = plt.subplots(figsize=VEC_FIGSIZE)
+    used_q = set()
+    vec_labels, vec_points = [], []
+    for v in vectors:
+        ac = QUADRANT_COLORS[v["quad"]]
+        used_q.add(v["quad"])
+        ax.annotate("", xy=(v["dx"], v["dy"]), xytext=(0, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=ac, lw=VEC_ARROW_LW * 0.7,
+                                    alpha=0.85, mutation_scale=VEC_ARROW_MUTATION * 0.7,
+                                    connectionstyle="arc3,rad=0.04"), zorder=4)
+        vec_points.append((v["dx"], v["dy"]))
+        if SHOW_VECTOR_LABELS:
+            vec_labels.append({"x": v["dx"], "y": v["dy"], "text": v["model"],
+                               "color": "black", "leader": ac})
+    style_origin_axes(ax, vectors, VEC_LABEL_FONTSIZE, VEC_TICK_FONTSIZE)
+    targets = sorted({v["target"] for v in vectors})
+    subtitle = f"origin = {ref};  arrows → " + ", ".join(targets)
+    ax.set_title(f"{title}: Origin-Centered Scaffold-Switch Vectors\n({subtitle})",
+                 fontsize=VEC_TITLE_FONTSIZE * 0.85, fontweight="bold")
+    ax.grid(True, alpha=0.25)
+    leg_handles = [plt.Line2D([], [], color=QUADRANT_COLORS[q], lw=6, label=QUADRANT_LABELS[q])
+                   for q in legend_order if q in used_q]
+    if leg_handles:
+        ax.legend(handles=leg_handles, fontsize=VEC_LEGEND_FONTSIZE, loc="best",
+                  framealpha=0.9, title="Direction of switch",
+                  title_fontsize=VEC_LEGEND_TITLE_FONTSIZE)
+    fig_i.tight_layout()
+    place_vector_labels(fig_i, ax, vec_labels, vec_points, fontsize=VEC_ANNOT_FONTSIZE)
+    safe_name = title.lower().replace(" ", "_").replace("-", "_").replace(".", "")
+    fig_i.savefig(BASE / "figures" / f"hal_origin_vectors_{safe_name}.png",
+                  dpi=SAVE_DPI, bbox_inches="tight")
+    print(f"Saved: hal_origin_vectors_{safe_name}.png")
+    plt.close(fig_i)
+
+
+# ─── Figure 5: One origin-centered panel per scaffold switch ──────────────────
+# Like Figure 4, but each panel shows exactly ONE scaffold switch (one benchmark,
+# one reference→target pair) and its title names that switch. Mind2Web is excluded
+# (it has no generalist reference scaffold).
+
+switch_panels = []  # (benchmark_title, ref_scaffold, target_scaffold, vectors)
+for fname, title, mcol in BENCHMARKS:
+    if "mind2web" in title.lower().replace(" ", ""):
+        continue
+    ref, vectors = origin_vectors(fname, mcol)
+    if not vectors:
+        continue
+    for target in sorted({v["target"] for v in vectors}):
+        tv = [v for v in vectors if v["target"] == target]
+        switch_panels.append((title, ref, target, tv))
+
+n_panels = len(switch_panels)
+ncols = 3
+nrows = int(np.ceil(n_panels / ncols))
+fig_s, axes_s = plt.subplots(nrows, ncols, figsize=(8 * ncols, 7 * nrows), squeeze=False)
+fig_s.suptitle("Origin-Centered Scaffold Switches\n"
+               "(origin = each model on the generalist scaffold; arrow = switch to the named scaffold)",
+               fontsize=GRID_SUPTITLE_FONTSIZE * 0.85, fontweight="bold", y=0.998)
+
+used_quadrants_switch = set()
+for idx, (title, ref, target, vectors) in enumerate(switch_panels):
+    ax = axes_s.flat[idx]
+    for v in vectors:
+        ac = QUADRANT_COLORS[v["quad"]]
+        used_quadrants_switch.add(v["quad"])
+        ax.annotate("", xy=(v["dx"], v["dy"]), xytext=(0, 0),
+                    arrowprops=dict(arrowstyle="-|>", color=ac, lw=GRID_LINEWIDTH + 0.5,
+                                    alpha=0.8, mutation_scale=22,
+                                    connectionstyle="arc3,rad=0.04"), zorder=4)
+    style_origin_axes(ax, vectors, GRID_LABEL_FONTSIZE * 0.85, GRID_TICK_FONTSIZE * 0.85)
+    ax.set_title(f"{title}\n{ref} → {target}",
+                 fontsize=GRID_TITLE_FONTSIZE * 0.7, fontweight="bold")
+    ax.grid(True, alpha=0.25)
+
+for idx in range(n_panels, nrows * ncols):
+    axes_s.flat[idx].set_visible(False)
+
+switch_legend_handles = [plt.Line2D([], [], color=QUADRANT_COLORS[q], lw=7, label=QUADRANT_LABELS[q])
+                         for q in legend_order if q in used_quadrants_switch]
+# Reserve a strip at the bottom for the legend, then anchor it inside that strip
+# (below the bottom row of panels) so it never overlaps their x-axis labels.
+plt.tight_layout(rect=[0, 0.075, 1, 0.975])
+if switch_legend_handles:
+    fig_s.legend(handles=switch_legend_handles, fontsize=GRID_LEGEND_FONTSIZE * 1.25,
+                 loc="upper center", bbox_to_anchor=(0.5, 0.065), ncol=2, framealpha=0.9,
+                 title="Direction of switch", title_fontsize=GRID_LEGEND_FONTSIZE * 1.35,
+                 handlelength=2.2, columnspacing=2.0, borderpad=0.7, labelspacing=0.6)
+fig_s.savefig(BASE / "figures" / "hal_origin_vectors_by_switch_grid.png", dpi=SAVE_DPI, bbox_inches="tight")
+fig_s.savefig(BASE / "figures" / "hal_origin_vectors_by_switch_grid.pdf", bbox_inches="tight")
+print(f"Saved: hal_origin_vectors_by_switch_grid.png/pdf ({n_panels} switch panels)")
+plt.close(fig_s)
+
+
+# ─── Figure 6: Mean switch arrow + confidence ellipse, all benchmarks overlaid ─
+# One plot. For each benchmark we pool its origin-centered switch vectors (origin
+# = generalist scaffold) and draw (a) a mean arrow from the origin to the centroid
+# of the endpoints — "the typical switch" — and (b) an ellipse summarizing the
+# cloud. Mind2Web is excluded (no generalist reference scaffold).
+from matplotlib.patches import Ellipse
+from scipy.stats import chi2
+
+# "ci" = 95% confidence ellipse on the mean (shrinks with n; "is the avg switch real?")
+# "sd" = 1 standard-deviation spread of models ("how consistent is the switch?")
+ELLIPSE_MODE = "ci"
+CI_LEVEL = 0.95
+
+
+def ellipse_params(points, mode=ELLIPSE_MODE, ci_level=CI_LEVEL):
+    """Return (mean, (width, height, angle_deg)) for a covariance ellipse.
+
+    Ellipse is None when there are too few points to estimate a covariance.
+    """
+    pts = np.asarray(points, dtype=float)
+    mean = pts.mean(axis=0)
+    if len(pts) < 3:
+        return mean, None
+    cov = np.cov(pts.T)
+    if mode == "ci":
+        cov = cov / len(pts)                       # covariance of the mean
+        scale = np.sqrt(chi2.ppf(ci_level, df=2))  # 95% region ≈ 2.45 σ in 2-D
+    else:                                          # "sd"
+        scale = 1.0
+    vals, vecs = np.linalg.eigh(cov)
+    order = vals.argsort()[::-1]
+    vals, vecs = vals[order], vecs[:, order]
+    angle = np.degrees(np.arctan2(vecs[1, 0], vecs[0, 0]))
+    width, height = 2 * scale * np.sqrt(np.clip(vals, 0, None))
+    return mean, (width, height, angle)
+
+
+overlay_benchmarks = [(f, t, m) for (f, t, m) in BENCHMARKS
+                      if "mind2web" not in t.lower().replace(" ", "")]
+
+fig_e, ax = plt.subplots(figsize=VEC_FIGSIZE)
+cmap = plt.cm.tab10
+
+# First pass: gather each benchmark's mean/ellipse/sample count.
+entries = []  # (title, color, mean, ell, n, pts)
+all_xy = []
+for i, (fname, title, mcol) in enumerate(overlay_benchmarks):
+    ref, vectors = origin_vectors(fname, mcol)
+    if not vectors:
+        continue
+    pts = [(v["dx"], v["dy"]) for v in vectors]
+    all_xy.extend(pts)
+    mean, ell = ellipse_params(pts)
+    entries.append((title, cmap(i % 10), mean, ell, len(pts), pts))
+
+# Map sample count → ellipse fill opacity (more samples ⇒ darker blob).
+ELLIPSE_ALPHA_RANGE = (0.10, 0.50)
+ns = [n for *_, n, _ in entries]
+n_min, n_max = min(ns), max(ns)
+def alpha_for_n(n):
+    if n_max == n_min:
+        return ELLIPSE_ALPHA_RANGE[1]
+    return float(np.interp(n, [n_min, n_max], ELLIPSE_ALPHA_RANGE))
+
+for title, color, mean, ell, n, pts in entries:
+    if ell is not None:
+        w, h, ang = ell
+        ax.add_patch(Ellipse(mean, w, h, angle=ang, facecolor=color, alpha=alpha_for_n(n),
+                             edgecolor=color, lw=2.0, zorder=3))
+    ax.annotate("", xy=(mean[0], mean[1]), xytext=(0, 0),
+                arrowprops=dict(arrowstyle="-|>", color=color, lw=4.0,
+                                mutation_scale=28, alpha=0.95,
+                                connectionstyle="arc3,rad=0.0"), zorder=5)
+    ax.scatter([mean[0]], [mean[1]], color=color, s=70, zorder=6,
+               edgecolors="white", linewidths=1.0, label=f"{title} (n={n})")
+
+# Symmetric framing around the origin from the pooled endpoints.
+px = max(max(abs(x) for x, _ in all_xy) * 1.25, 0.1)
+py = max(max(abs(y) for _, y in all_xy) * 1.25, 0.1)
+ax.set_xlim(-px, px)
+ax.set_ylim(-py, py)
+
+# Faint quadrant tints + origin crosshairs (same semantics as the per-benchmark plots).
+tint = 0.05
+ax.axhspan(0, py, xmin=0.5, xmax=1.0, color=QUADRANT_COLORS["more_acc_more_exp"], alpha=tint, zorder=0)
+ax.axhspan(0, py, xmin=0.0, xmax=0.5, color=QUADRANT_COLORS["more_acc_less_exp"], alpha=tint, zorder=0)
+ax.axhspan(-py, 0, xmin=0.5, xmax=1.0, color=QUADRANT_COLORS["less_acc_more_exp"], alpha=tint, zorder=0)
+ax.axhspan(-py, 0, xmin=0.0, xmax=0.5, color=QUADRANT_COLORS["less_acc_less_exp"], alpha=tint, zorder=0)
+ax.axhline(0, color="#555", lw=1.4, zorder=1)
+ax.axvline(0, color="#555", lw=1.4, zorder=1)
+ax.scatter([0], [0], c="black", s=80, zorder=7, marker="o")
+
+ax.xaxis.set_major_formatter(make_cost_mult_formatter())
+ax.set_xlabel("Cost change vs. generalist (×, log scale)", fontsize=VEC_LABEL_FONTSIZE)
+ax.set_ylabel("Accuracy change vs. generalist (Δ logit)", fontsize=VEC_LABEL_FONTSIZE)
+ax.tick_params(axis="both", labelsize=VEC_TICK_FONTSIZE)
+ax.grid(True, alpha=0.25)
+ellipse_desc = ("95% confidence ellipse on the mean" if ELLIPSE_MODE == "ci"
+                else "1 SD spread across models")
+ax.set_title("Mean Scaffold-Switch Vector by Benchmark\n"
+             f"(origin = generalist scaffold; arrow = mean switch; ellipse = {ellipse_desc})",
+             fontsize=VEC_TITLE_FONTSIZE * 0.8, fontweight="bold")
+ax.legend(fontsize=VEC_LEGEND_FONTSIZE * 0.8, loc="best", framealpha=0.9, title="Benchmark",
+          title_fontsize=VEC_LEGEND_TITLE_FONTSIZE * 0.8)
+fig_e.tight_layout()
+fig_e.savefig(BASE / "figures" / "hal_origin_vectors_mean_ellipse_overlay.png",
+              dpi=SAVE_DPI, bbox_inches="tight")
+fig_e.savefig(BASE / "figures" / "hal_origin_vectors_mean_ellipse_overlay.pdf", bbox_inches="tight")
+print("Saved: hal_origin_vectors_mean_ellipse_overlay.png/pdf")
+plt.close(fig_e)
+
+
+# ─── Figure 7: Spider/radar — generalist vs. best specialist scaffold ─────────
+# One axis per benchmark. Inner web = max accuracy reachable on the HAL generalist
+# scaffold; outer web = max accuracy reachable on the best specialist scaffold.
+# The gap between the two webs is the capability headroom that scaffolding unlocks.
+# Mind2Web is excluded (no generalist scaffold).
+
+spider_benchmarks = [(f, t, m) for (f, t, m) in BENCHMARKS
+                     if "mind2web" not in t.lower().replace(" ", "")]
+
+spider_labels, gen_vals, spec_vals = [], [], []
+for fname, title, mcol in spider_benchmarks:
+    df = load_hal(fname, mcol)
+    gen = get_reference_scaffold(df)
+    spider_labels.append(title)
+    gen_vals.append(float(df[df["scaffold"] == gen]["accuracy"].max()))
+    spec_vals.append(float(df[df["scaffold"] != gen]["accuracy"].max()))
+
+N = len(spider_labels)
+angles = np.linspace(0, 2 * np.pi, N, endpoint=False).tolist()
+ang_c = angles + angles[:1]                       # close the loop
+gen_c = gen_vals + gen_vals[:1]
+spec_c = spec_vals + spec_vals[:1]
+
+GEN_COLOR = "#1f77b4"     # blue  — generalist scaffold
+SPEC_COLOR = "#2ca02c"    # green — best specialist scaffold
+
+fig_r = plt.figure(figsize=(13, 13))
+ax = fig_r.add_subplot(111, polar=True)
+ax.set_theta_offset(np.pi / 2)   # first axis at top
+ax.set_theta_direction(-1)       # clockwise
+
+# Outer (specialist) web first, then generalist on top.
+ax.plot(ang_c, spec_c, color=SPEC_COLOR, lw=3.5, zorder=4,
+        label="Best specialist scaffold (max accuracy)")
+ax.fill(ang_c, spec_c, color=SPEC_COLOR, alpha=0.15, zorder=2)
+ax.plot(ang_c, gen_c, color=GEN_COLOR, lw=3.5, zorder=5,
+        label="HAL generalist scaffold (max accuracy)")
+ax.fill(ang_c, gen_c, color=GEN_COLOR, alpha=0.22, zorder=3)
+
+# Markers + value labels at each vertex.
+for ang, gv, sv in zip(angles, gen_vals, spec_vals):
+    ax.scatter(ang, sv, color=SPEC_COLOR, s=70, zorder=6)
+    ax.scatter(ang, gv, color=GEN_COLOR, s=70, zorder=7)
+    ax.annotate(f"{sv:.0f}%", (ang, sv), textcoords="offset points", xytext=(0, 9),
+                ha="center", fontsize=13, fontweight="bold", color=SPEC_COLOR, zorder=8)
+    ax.annotate(f"{gv:.0f}%", (ang, gv), textcoords="offset points", xytext=(0, -13),
+                ha="center", fontsize=13, fontweight="bold", color=GEN_COLOR, zorder=8)
+
+ax.set_xticks(angles)
+ax.set_xticklabels(spider_labels, fontsize=16, fontweight="bold")
+ax.tick_params(axis="x", pad=22)
+ax.set_ylim(0, 100)
+ax.set_yticks([20, 40, 60, 80, 100])
+ax.set_yticklabels(["20%", "40%", "60%", "80%", "100%"], fontsize=12, color="#666")
+ax.grid(True, alpha=0.4)
+ax.set_title("Scaffolding Headroom by Benchmark\n"
+             "(max accuracy: HAL generalist scaffold vs. best specialist scaffold)",
+             fontsize=22, fontweight="bold", pad=42)
+ax.legend(loc="upper right", bbox_to_anchor=(1.18, 1.12), fontsize=15, framealpha=0.9)
+
+fig_r.tight_layout()
+fig_r.savefig(BASE / "figures" / "hal_spider_generalist_vs_specialist.png",
+              dpi=SAVE_DPI, bbox_inches="tight")
+fig_r.savefig(BASE / "figures" / "hal_spider_generalist_vs_specialist.pdf", bbox_inches="tight")
+print("Saved: hal_spider_generalist_vs_specialist.png/pdf")
+plt.close(fig_r)
+
 plt.show()
