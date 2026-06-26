@@ -1,20 +1,20 @@
 model_version,n_bm_scaffold_pairs,n_benchmarks,n_scaffolds,benchmarks
-GPT-4.1 High,18,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-Claude-3.7 Sonnet High,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-o4-mini High,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+GPT-4.1,18,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+Claude-3.7 Sonnet,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+o4-mini,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
 o4-mini Low,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
 o3 Medium,16,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-Gemini 2.0 Flash High,15,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-DeepSeek V3 High,14,9,9,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+Gemini 2.0 Flash,15,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+DeepSeek V3,14,9,9,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
 GPT-5 Medium,14,9,10,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-Claude Opus 4.1 High,13,8,10,AssistBench; CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
-DeepSeek R1 High,11,8,7,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; TAU-bench Airline; USACO
-Claude Sonnet 4.5 High,10,6,8,AssistBench; CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench; SciCode
-Claude Opus 4 High,5,3,3,GAIA; SWE-bench Mini Verified; TAU-bench Airline
-Claude Haiku 4.5 High,4,4,3,CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench
-Claude Sonnet 4 High,4,2,4,CORE-bench Hard; Online Mind2Web
-Claude Opus 4.5 High,3,1,3,CORE-bench Hard
-GPT-OSS-120B High,2,1,2,CORE-bench Hard
-Gemini 2.5 Pro Preview High,2,1,2,CORE-bench Hard
-Gemini 3 Pro Preview High,2,1,2,CORE-bench Hard
-DeepSeek V3.1 High,1,1,1,CORE-bench Hard
+Claude Opus 4.1,13,8,10,AssistBench; CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
+DeepSeek R1,11,8,7,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; TAU-bench Airline; USACO
+Claude Sonnet 4.5,10,6,8,AssistBench; CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench; SciCode
+Claude Opus 4,5,3,3,GAIA; SWE-bench Mini Verified; TAU-bench Airline
+Claude Haiku 4.5,4,4,3,CORE-bench Hard; GAIA; SWE-bench Mini Verified; SciAgentBench
+Claude Sonnet 4,4,2,4,CORE-bench Hard; Online Mind2Web
+Claude Opus 4.5,3,1,3,CORE-bench Hard
+GPT-OSS-120B,2,1,2,CORE-bench Hard
+Gemini 2.5 Pro Preview,2,1,2,CORE-bench Hard
+Gemini 3 Pro Preview,2,1,2,CORE-bench Hard
+DeepSeek V3.1,1,1,1,CORE-bench Hard
