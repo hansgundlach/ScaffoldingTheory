@@ -381,3 +381,32 @@ plt.tight_layout()
 out_fig2 = FIG / "price_covariate_scaffold_adjr2.png"
 fig2.savefig(out_fig2, dpi=SAVE_DPI, bbox_inches="tight")
 print("Saved %s" % out_fig2)
+
+# ─── Figure: conservative, non-Shapley comparison (net of price + benchmark) ──
+# Benchmark + price entered first and absorb the shared variance; scaffold/model
+# dummies added afterward. The scaffold-unfavourable way to keep score.
+fig3, ax3 = plt.subplots(figsize=(5.6, 4.0))
+bars = ["Scaffold", "Model"]
+vals = [inc_s_pb, inc_m_pb]
+colors = ["#DD8452", "#4C72B0"]
+xb = np.arange(len(bars))
+ax3.bar(xb, vals, width=0.6, color=colors)
+for xi, v in zip(xb, vals):
+    ax3.text(xi, v + 0.004, f"+{v:.3f}", ha="center", va="bottom", fontsize=11, fontweight="bold")
+ax3.set_xticks(xb)
+ax3.set_xticklabels(bars, fontsize=12)
+ax3.set_ylim(0, max(vals) * 1.25)
+ax3.set_ylabel("Added explanatory power\n(incremental adjusted $R^2$)", fontsize=11)
+ax3.set_title("Drivers of agent performance, net of price and benchmark\n"
+              "(benchmark absorbs shared variance; scaffold added later)", fontsize=11.5)
+ax3.grid(axis="y", alpha=0.3)
+for spine in ["top", "right"]:
+    ax3.spines[spine].set_visible(False)
+ax3.annotate(f"DV = logit(accuracy);  n = {len(d)} systems across "
+             f"{d['benchmark'].nunique()} HAL benchmarks",
+             xy=(0.5, -0.16), xycoords="axes fraction", ha="center",
+             fontsize=8, color="#666")
+plt.tight_layout()
+out_fig3 = FIG / "scaffold_vs_model_net_of_price_benchmark.png"
+fig3.savefig(out_fig3, dpi=SAVE_DPI, bbox_inches="tight")
+print("Saved %s" % out_fig3)
