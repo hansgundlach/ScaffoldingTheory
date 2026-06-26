@@ -73,13 +73,8 @@ def normalize_model(s):
     if pd.isna(s):
         return s
     s = str(s).strip()
-    s = re.sub(r"\s*\(.*?\)", "", s).strip()        # drop the "(August 2025)" date stamp
-    # Keep each reasoning-effort level distinct (High / Medium / Low). Runs that
-    # carry no effort label are HAL's default high-effort runs, so tag them
-    # "High" as well — this gives every model an explicit effort/version label
-    # (and merges an unlabelled run with its explicit-High twin, as before).
-    if not re.search(r"\b(High|Medium|Low)\b", s):
-        s = f"{s} High"
+    s = re.sub(r"\s+High\b", "", s)
+    s = re.sub(r"\s*\(.*?\)", "", s)
     return s.strip()
 
 
