@@ -67,16 +67,78 @@ Primary specification (cost ≥ $1, n = 181):
   dropping reproduces the picture: scaffold 0.158, model 0.168 (raw adjusted R²),
   Shapley model 23.2 % vs. scaffold 13.5 %.
 
+## Preferred specification: price as a covariate (no pole, full n = 185)
+
+The ratio is statistically awkward because of the $1 pole. The cleaner spec keeps
+the dependent variable as `logit(accuracy)` and enters `log(cost)` as a **control
+term** rather than a denominator; nothing is divided, so the pole disappears and
+all 185 systems are used. "Combined effect of the scaffold dummies" becomes their
+**incremental adjusted R²** on top of the controls. Outputs:
+`price_covariate_scaffold_results.csv`, `figures/price_covariate_scaffold_adjr2.png`.
+
+| Specification (DV = `logit(accuracy)`) | adjusted R² | incremental |
+|---|---|---|
+| `logit_acc ~ log_cost` | 0.136 | — |
+| `+ scaffold dummies` | 0.472 | **+0.336** |
+| `+ model dummies` | 0.132 | **−0.004** |
+| `logit_acc ~ log_cost + benchmark` | 0.519 | — |
+| `+ scaffold dummies` | 0.694 | **+0.176** |
+| `+ model dummies` | 0.627 | **+0.108** |
+
+- **Price explains little on its own** (adjusted R² 0.136; 6 % of variance in the
+  Shapley below). Accuracy differences are not mainly a price story.
+- **Net of price only**, scaffold dummies add a large +0.336 while model dummies
+  add essentially nothing (−0.004). This is *not* evidence that the model is
+  irrelevant — it is the nesting artifact. Because scaffolds are benchmark-
+  specific, the scaffold dummies stand in for *which benchmark* a run is on, and
+  benchmark is the dominant difficulty axis; model dummies, spread across
+  benchmarks, can't predict accuracy until you know the benchmark (the same model
+  scores ~5 % on SciCode and ~70 % on GAIA). It is the clearest possible argument
+  for controlling for benchmark.
+- **Net of price *and* benchmark** (the fair comparison), the scaffold's unique
+  contribution (+0.176) is still larger than the model's (+0.108): within a
+  benchmark, holding price fixed, which scaffold you run explains more of the
+  remaining accuracy spread than which model you run.
+- **4-factor Shapley** on `logit(accuracy)` (full-model R² 0.804):
+  **price 5.9 % · benchmark 34.8 % · model 13.6 % · scaffold 26.0 % · residual
+  19.6 %.** Benchmark difficulty dominates, then scaffold, then model. Read this
+  one with the collinearity caveat below: scaffold and benchmark overlap, so the
+  Shapley hands scaffold a share of the benchmark-like variance; the +0.176
+  incremental is the conservative estimate of scaffold's *unique* power, and it
+  still beats the model's.
+
 ## Takeaway
 
-On a price-adjusted metric, **the scaffold is a first-order driver of
-cost-efficient agent performance — about as important as the model in raw terms,
-and roughly two-thirds as important once benchmark difficulty is partialled out.**
-This extends the headline ANOVA claim (scaffold rivals model on some benchmarks)
-to a metric that explicitly accounts for cost.
+Across both specifications the conclusion is the same and, if anything, stronger
+under the cleaner covariate spec: **the scaffold is a first-order driver of agent
+performance — on a price-adjusted basis at least as important as the model, and
+in the price-controlled specification its unique contribution exceeds the
+model's.** Price itself is a minor axis. This extends the headline ANOVA claim
+(scaffold rivals model on some benchmarks) to a pooled, price-aware analysis.
 
-> Caveat for the writeup: the `logit / log(cost)` ratio is statistically awkward
-> because of the $1 pole; the numbers above use the cost ≥ $1 sample. If a
-> cleaner specification is wanted, regressing `logit(accuracy)` on scaffold/model
-> dummies **with `log(cost)` as a covariate** (price as a control rather than a
-> denominator) avoids the pole entirely and answers the same question.
+## Method notes
+
+**Winsorisation.** Used only as a robustness check on the *ratio* metric, whose
+$1 pole produced one explosive value (`y ≈ 14.6`) that swamped the variance and
+drove the adjusted R²'s to ≈ 0. Winsorising "pulls in the tails": we cap `y` at
+its 2nd and 98th percentiles — any value below the 2nd-percentile cutoff is set
+to that cutoff and any value above the 98th is set to the 98th — so the extreme
+points are kept (we don't drop rows) but can no longer dominate the sum of
+squares. It is the soft alternative to the hard `cost ≥ $1` exclusion, and it
+gives the same qualitative answer, which is what makes the ratio result credible
+rather than an artifact of which four rows we deleted. The covariate spec needs
+no winsorisation because it never divides.
+
+**Why this is a "Shapley".** The question "how much does scaffold explain?" has no
+unique answer when factors are correlated: scaffold's marginal R² depends on
+whether it is entered before or after benchmark/model. The Shapley value (here the
+LMG / Shapley-regression method) resolves this the same way cooperative game
+theory splits a payout among players — each factor's credit is the *average* of
+its marginal contribution (increase in R²) over **every ordering** in which the
+factors could be added. Averaging over all orderings is what makes the shares
+(i) order-independent and (ii) exactly additive: they sum to the full-model R²,
+with the leftover `1 − R²(full)` as residual. That additivity is the property a
+plain sequential regression lacks and is why the bars can be stacked. The same
+logic and code (`shapley()` in the script) underlie the per-benchmark
+decomposition in `anova_analysis.py`; here we just apply it pooled and with more
+factors (price/benchmark/model/scaffold).

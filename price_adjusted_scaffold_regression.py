@@ -134,11 +134,20 @@ def fit(formula, data):
     return {"r2": m.rsquared, "adj_r2": m.rsquared_adj, "df_model": int(m.df_model)}
 
 
-def shapley_3(data, factors):
-    """3-factor Shapley decomposition of full-model R^2 (LMG / Shapley-regression).
+def shapley(data, factors, dv="y"):
+    """Shapley decomposition of full-model R^2 (LMG / Shapley-regression method).
+
+    Each factor's share is the average, over every ordering in which the factors
+    are entered, of the increase in R^2 it produces when added. Equivalently it
+    is the weighted sum, over every coalition T not containing factor i, of the
+    marginal gain R^2(T+i) - R^2(T), with combinatorial weights that count how
+    many orderings put i right after T. The weights sum to 1, so the shares are
+    order-independent and add up exactly to the full-model R^2; the leftover
+    1 - R^2(full) is the residual. This generalises to any number of factors.
 
     factors: dict label -> formula term, e.g. {'benchmark':'C(benchmark)', ...}.
-    Returns label -> share of total variance; shares + residual sum to 1.
+    dv:      name of the dependent variable column.
+    Returns (shares dict incl. 'residual', full-model R^2).
     """
     labels = list(factors)
     from itertools import combinations
@@ -150,7 +159,7 @@ def shapley_3(data, factors):
         if not subset:
             return 0.0
         rhs = " + ".join(factors[l] for l in subset)
-        return smf.ols(f"y ~ {rhs}", data=data).fit().rsquared
+        return smf.ols(f"{dv} ~ {rhs}", data=data).fit().rsquared
 
     # Cache R^2 for every coalition.
     cache = {}
@@ -190,9 +199,10 @@ def analyze(data):
         inc_scaffold=bs["adj_r2"] - b["adj_r2"],
         inc_model=bm["adj_r2"] - b["adj_r2"],
     )
-    shap, r2_full = shapley_3(
+    shap, r2_full = shapley(
         data,
         {"benchmark": "C(benchmark)", "model": "C(model_norm)", "scaffold": "C(scaffold)"},
+        dv="y",
     )
     out.update(
         shap_benchmark=shap["benchmark"], shap_model=shap["model"],
@@ -266,3 +276,94 @@ plt.tight_layout()
 out_fig = FIG / "price_adjusted_scaffold_adjr2.png"
 fig.savefig(out_fig, dpi=SAVE_DPI, bbox_inches="tight")
 print(f"Saved {out_fig}")
+
+
+# ═══ ALTERNATIVE SPECIFICATION: price as a covariate (no pole) ════════════════
+# Here the dependent variable is logit(accuracy) and log(cost) enters as a
+# control term rather than a denominator. Dividing is what created the pole at
+# cost=$1; as a covariate log(cost) is perfectly well behaved, so this spec uses
+# the FULL sample (n=185). "Combined effect of the scaffold dummies" becomes the
+# incremental adjusted R^2 from adding them on top of price (and, in the second
+# block, price + benchmark). Same fair-comparison logic as before: adjusted R^2
+# nets out the differing dummy counts.
+print("\n" + "=" * 78)
+print("COVARIATE SPEC   DV = logit(accuracy),  log(cost) as a control  (n=%d)" % len(d))
+print("=" * 78)
+
+
+def incr(base_terms, add_term):
+    """adjusted R^2 of base, of base+add, and the increment from adding add."""
+    base = fit("logit_acc ~ " + " + ".join(base_terms), d)["adj_r2"]
+    both = fit("logit_acc ~ " + " + ".join(base_terms + [add_term]), d)["adj_r2"]
+    return base, both, both - base
+
+# Net of price only.
+b_price = fit("logit_acc ~ log_cost", d)["adj_r2"]
+_, as_p, inc_s_p = incr(["log_cost"], "C(scaffold)")
+_, am_p, inc_m_p = incr(["log_cost"], "C(model_norm)")
+print("\nlogit_acc ~ log_cost                       adjR2=%.3f" % b_price)
+print("           + scaffold dummies               adjR2=%.3f  (incremental %+.3f)" % (as_p, inc_s_p))
+print("           + model dummies                  adjR2=%.3f  (incremental %+.3f)" % (am_p, inc_m_p))
+
+# Net of price AND benchmark (handles the scaffold-nested-in-benchmark confound).
+b_pb = fit("logit_acc ~ log_cost + C(benchmark)", d)["adj_r2"]
+_, as_pb, inc_s_pb = incr(["log_cost", "C(benchmark)"], "C(scaffold)")
+_, am_pb, inc_m_pb = incr(["log_cost", "C(benchmark)"], "C(model_norm)")
+print("\nlogit_acc ~ log_cost + benchmark           adjR2=%.3f" % b_pb)
+print("           + scaffold dummies               adjR2=%.3f  (incremental %+.3f)" % (as_pb, inc_s_pb))
+print("           + model dummies                  adjR2=%.3f  (incremental %+.3f)" % (am_pb, inc_m_pb))
+
+# 4-factor Shapley: split logit(accuracy) variance across price/benchmark/model/scaffold.
+shap_c, r2c = shapley(
+    d,
+    {"price": "log_cost", "benchmark": "C(benchmark)",
+     "model": "C(model_norm)", "scaffold": "C(scaffold)"},
+    dv="logit_acc",
+)
+print("\n4-factor Shapley on logit(accuracy)  (R2_full=%.3f):" % r2c)
+for k in ["price", "benchmark", "model", "scaffold", "residual"]:
+    print("  %-10s %5.1f%%" % (k, 100 * shap_c[k]))
+print("  model:scaffold ratio = %.2fx" % (shap_c["model"] / shap_c["scaffold"]))
+
+# Persist covariate results.
+cov = pd.DataFrame(
+    [
+        ("logit_acc ~ log_cost", b_price, np.nan),
+        ("  + scaffold", as_p, inc_s_p),
+        ("  + model", am_p, inc_m_p),
+        ("logit_acc ~ log_cost + benchmark", b_pb, np.nan),
+        ("  + scaffold", as_pb, inc_s_pb),
+        ("  + model", am_pb, inc_m_pb),
+    ],
+    columns=["spec", "adj_r2", "incremental_adj_r2"],
+)
+for k in ["price", "benchmark", "model", "scaffold", "residual"]:
+    cov["shap_" + k] = shap_c[k]
+cov_csv = BASE / "price_covariate_scaffold_results.csv"
+cov.to_csv(cov_csv, index=False)
+print("\nSaved %s" % cov_csv)
+
+# ─── Figure: incremental adj R^2 (scaffold vs model), net of price / +benchmark
+fig2, ax2 = plt.subplots(figsize=(7.4, 3.8))
+groups = ["net of price", "net of price\n+ benchmark"]
+scaf_inc = [inc_s_p, inc_s_pb]
+mod_inc = [inc_m_p, inc_m_pb]
+x = np.arange(len(groups))
+w = 0.36
+ax2.bar(x - w / 2, scaf_inc, w, color="#DD8452", label="Scaffold dummies")
+ax2.bar(x + w / 2, mod_inc, w, color="#4C72B0", label="Model dummies")
+for xi in x:
+    ax2.text(xi - w / 2, scaf_inc[xi] + 0.005, f"{scaf_inc[xi]:.2f}", ha="center", va="bottom", fontsize=9)
+    ax2.text(xi + w / 2, mod_inc[xi] + 0.005, f"{mod_inc[xi]:.2f}", ha="center", va="bottom", fontsize=9)
+ax2.set_xticks(x)
+ax2.set_xticklabels(groups, fontsize=10)
+ax2.set_ylabel("Incremental adjusted $R^2$\non logit(accuracy)", fontsize=10)
+ax2.set_title("Price as a covariate (n=%d): added explanatory power\nof scaffold vs. model dummies" % len(d), fontsize=12)
+ax2.legend(fontsize=9, framealpha=0.95)
+ax2.grid(axis="y", alpha=0.3)
+for spine in ["top", "right"]:
+    ax2.spines[spine].set_visible(False)
+plt.tight_layout()
+out_fig2 = FIG / "price_covariate_scaffold_adjr2.png"
+fig2.savefig(out_fig2, dpi=SAVE_DPI, bbox_inches="tight")
+print("Saved %s" % out_fig2)
