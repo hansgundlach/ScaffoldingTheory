@@ -158,6 +158,45 @@ BENCHMARKS = [
 LINESTYLES = ["-", "--", "-.", ":"]
 MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
+
+# ─── Consistent scaffold colors across figures ───────────────────────────────
+# Only scaffolds that appear in more than one benchmark get a pinned color so
+# they look the same in every figure (in this data that's "HAL Generalist Agent").
+# Single-benchmark scaffolds just take the normal local palette — they need no
+# cross-figure consistency, and may freely reuse colors between different graphs.
+def build_shared_scaffold_colors():
+    counts = {}
+    for fname, title, mcol in BENCHMARKS:
+        try:
+            df = load_hal(fname, mcol)
+        except Exception:
+            continue
+        for s in {str(x) for x in df["scaffold"].dropna().unique()}:
+            counts[s] = counts.get(s, 0) + 1
+    shared = sorted([s for s, c in counts.items() if c > 1],
+                    key=lambda s: (0 if "generalist" in s.lower() else 1, s.lower()))
+    palette = list(plt.cm.tab10.colors)
+    return {s: palette[i % len(palette)] for i, s in enumerate(shared)}
+
+
+SHARED_SCAFFOLD_COLORS = build_shared_scaffold_colors()
+
+
+def panel_scaffold_colors(scaffolds):
+    """Color map for one panel: pinned colors for shared scaffolds, local palette
+    (skipping the pinned colors) for the rest."""
+    reserved = set(SHARED_SCAFFOLD_COLORS.values())
+    avail = [c for c in plt.cm.tab10.colors if c not in reserved]
+    out, ai = {}, 0
+    for s in scaffolds:
+        if str(s) in SHARED_SCAFFOLD_COLORS:
+            out[s] = SHARED_SCAFFOLD_COLORS[str(s)]
+        else:
+            out[s] = avail[ai % len(avail)] if avail else plt.cm.tab10.colors[ai % 10]
+            ai += 1
+    return out
+
+
 fig, axes = plt.subplots(4, 2, figsize=GRID_FIGSIZE)
 fig.suptitle("HAL Benchmarks: Per-Scaffold Pareto Frontiers\n(y-axis = logit of accuracy, x-axis = log cost)",
              fontsize=GRID_SUPTITLE_FONTSIZE, fontweight="bold", y=0.995)
@@ -167,8 +206,7 @@ for idx, (fname, title, mcol) in enumerate(BENCHMARKS):
     df = load_hal(fname, mcol)
 
     scaffolds = sorted(df["scaffold"].unique())
-    cmap = plt.cm.tab10
-    scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
+    scaffold_colors = panel_scaffold_colors(scaffolds)
 
     for si, scaffold in enumerate(scaffolds):
         grp = df[df["scaffold"] == scaffold].copy()
@@ -229,8 +267,7 @@ for fname, title, mcol in BENCHMARKS:
     df = load_hal(fname, mcol)
 
     scaffolds = sorted(df["scaffold"].unique())
-    cmap = plt.cm.tab10
-    scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
+    scaffold_colors = panel_scaffold_colors(scaffolds)
 
     for si, scaffold in enumerate(scaffolds):
         grp = df[df["scaffold"] == scaffold].copy()
@@ -461,8 +498,7 @@ def render_vector_figure(fname, title, mcol, style="default", pair=None):
         scaffold_colors = {s: EPOCH_SCAFFOLD_PALETTE[i % len(EPOCH_SCAFFOLD_PALETTE)]
                            for i, s in enumerate(scaffolds)}
     else:
-        cmap = plt.cm.tab10
-        scaffold_colors = {s: cmap(i % 10) for i, s in enumerate(scaffolds)}
+        scaffold_colors = panel_scaffold_colors(scaffolds)
 
     label_color = EPOCH_TEXT_DARK if epoch else "black"
 
@@ -824,13 +860,27 @@ fig_s.suptitle("Origin-Centered Scaffold Switches\n"
 used_quadrants_switch = set()
 for idx, (title, ref, target, vectors) in enumerate(switch_panels):
     ax = axes_s.flat[idx]
+    # A "stub" is a near-zero-length switch (e.g. a model whose accuracy is
+    # unchanged and cost barely moves) whose arrow would otherwise be hidden
+    # under the origin dot. We keep stubs TRUE-TO-SCALE — just drawn above the
+    # origin dot with an endpoint marker so the tiny arrow is visible without
+    # exaggerating its magnitude. Every other arrow is left exactly as-is.
+    panel_max_len = max((np.hypot(v["dx"], v["dy"]) for v in vectors), default=0.0)
+    stub_thresh = 0.06 * panel_max_len
     for v in vectors:
         ac = QUADRANT_COLORS[v["quad"]]
         used_quadrants_switch.add(v["quad"])
+        vlen = np.hypot(v["dx"], v["dy"])
+        is_stub = panel_max_len > 0 and 0 < vlen < stub_thresh
+        # Lift stubs above the origin dot (zorder 6) so they aren't occluded.
+        z = 8 if is_stub else 4
         ax.annotate("", xy=(v["dx"], v["dy"]), xytext=(0, 0),
                     arrowprops=dict(arrowstyle="-|>", color=ac, lw=GRID_LINEWIDTH + 0.5,
-                                    alpha=0.8, mutation_scale=22,
-                                    connectionstyle="arc3,rad=0.04"), zorder=4)
+                                    alpha=0.8, mutation_scale=27,
+                                    connectionstyle="arc3,rad=0.04"), zorder=z)
+        if is_stub:
+            ax.scatter([v["dx"]], [v["dy"]], c=[ac], s=22, zorder=9,
+                       edgecolors="white", linewidths=0.6)
     style_origin_axes(ax, vectors, GRID_LABEL_FONTSIZE * 0.85, GRID_TICK_FONTSIZE * 0.85)
     ax.set_title(f"{title}\n{ref} → {target}",
                  fontsize=GRID_TITLE_FONTSIZE * 0.7, fontweight="bold")
