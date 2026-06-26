@@ -213,6 +213,27 @@ def analyze(data):
 
 # ─── Build samples ───────────────────────────────────────────────────────────
 d = build_dataset()
+
+# Export the exact set of (normalised) models entering the analysis, with how
+# many systems and benchmarks each appears in. Kept in sync because it is derived
+# straight from the analysis dataframe `d`.
+models = (
+    d.groupby("model_norm")
+    .agg(
+        n_systems=("model_norm", "size"),
+        n_benchmarks=("benchmark", "nunique"),
+        n_scaffolds=("scaffold", "nunique"),
+        benchmarks=("benchmark", lambda s: "; ".join(sorted(s.unique()))),
+    )
+    .reset_index()
+    .rename(columns={"model_norm": "model"})
+    .sort_values(["n_systems", "model"], ascending=[False, True])
+    .reset_index(drop=True)
+)
+models_csv = BASE / "models_in_analysis.csv"
+models.to_csv(models_csv, index=False)
+print("Saved %s (%d models)\n" % (models_csv, len(models)))
+
 full = d
 primary = d[d["cost"] >= 1.0].copy()                 # drop the pole at cost=$1
 # Winsorise y to its 2nd/98th percentile on the full sample (alternative to dropping)
