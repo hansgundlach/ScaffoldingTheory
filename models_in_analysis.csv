@@ -1,4 +1,4 @@
-model_version,n_systems,n_benchmarks,n_scaffolds,benchmarks
+model_version,n_bm_scaffold_pairs,n_benchmarks,n_scaffolds,benchmarks
 GPT-4.1 High,18,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
 Claude-3.7 Sonnet High,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO
 o4-mini High,17,9,11,AssistBench; CORE-bench Hard; GAIA; Online Mind2Web; SWE-bench Mini Verified; SciAgentBench; SciCode; TAU-bench Airline; USACO

@@ -220,19 +220,19 @@ def analyze(data):
 d = build_dataset()
 
 # Export the exact set of (normalised) models entering the analysis, with how
-# many systems and benchmarks each appears in. Kept in sync because it is derived
-# straight from the analysis dataframe `d`.
+# many benchmark x scaffold pairs (= regression observations) each appears in.
+# Kept in sync because it is derived straight from the analysis dataframe `d`.
 models = (
     d.groupby("model_norm")
     .agg(
-        n_systems=("model_norm", "size"),
+        n_bm_scaffold_pairs=("model_norm", "size"),
         n_benchmarks=("benchmark", "nunique"),
         n_scaffolds=("scaffold", "nunique"),
         benchmarks=("benchmark", lambda s: "; ".join(sorted(s.unique()))),
     )
     .reset_index()
     .rename(columns={"model_norm": "model_version"})
-    .sort_values(["n_systems", "model_version"], ascending=[False, True])
+    .sort_values(["n_bm_scaffold_pairs", "model_version"], ascending=[False, True])
     .reset_index(drop=True)
 )
 models_csv = BASE / "models_in_analysis.csv"
