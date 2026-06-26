@@ -95,10 +95,14 @@ all 185 systems are used. "Combined effect of the scaffold dummies" becomes thei
   benchmarks, can't predict accuracy until you know the benchmark (the same model
   scores ~5 % on SciCode and ~70 % on GAIA). It is the clearest possible argument
   for controlling for benchmark.
-- **Net of price *and* benchmark** (the fair comparison), the scaffold's unique
+- **Net of price *and* benchmark** (the fair comparison), the scaffold's
   contribution (+0.176) is still larger than the model's (+0.108): within a
   benchmark, holding price fixed, which scaffold you run explains more of the
-  remaining accuracy spread than which model you run.
+  remaining accuracy spread than which model you run. Entering each factor
+  **last** — net of price, benchmark *and the other factor* — sharpens this to
+  scaffold **+0.127** vs. model **+0.060** (≈ 2.1×): the variance uniquely
+  attributable to the scaffold is about double that uniquely attributable to the
+  model.
 - **4-factor Shapley** on `logit(accuracy)` (full-model R² 0.804):
   **price 5.9 % · benchmark 34.8 % · model 13.6 % · scaffold 26.0 % · residual
   19.6 %.** Benchmark difficulty dominates, then scaffold, then model. Read this
@@ -112,9 +116,14 @@ all 185 systems are used. "Combined effect of the scaffold dummies" becomes thei
 Across both specifications the conclusion is the same and, if anything, stronger
 under the cleaner covariate spec: **the scaffold is a first-order driver of agent
 performance — on a price-adjusted basis at least as important as the model, and
-in the price-controlled specification its unique contribution exceeds the
-model's.** Price itself is a minor axis. This extends the headline ANOVA claim
-(scaffold rivals model on some benchmarks) to a pooled, price-aware analysis.
+in the price-controlled specification its unique contribution is about twice the
+model's (+0.127 vs +0.060 adjusted R², each net of price, benchmark and the other
+factor).** Price itself is a minor axis (≈ 6 % of variance). This extends the
+headline per-benchmark ANOVA claim (scaffold rivals model on some benchmarks) to
+a pooled, price-aware analysis — and the pooled, fully-controlled comparison puts
+the scaffold ahead. (The pooled result reads stronger than the per-benchmark one
+in `anova_analysis.py` partly because pooling lets the 11 scaffold dummies borrow
+strength across benchmarks while each benchmark individually has only 2–3.)
 
 ## Method notes
 

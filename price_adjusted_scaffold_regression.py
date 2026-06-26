@@ -325,6 +325,17 @@ for k in ["price", "benchmark", "model", "scaffold", "residual"]:
     print("  %-10s %5.1f%%" % (k, 100 * shap_c[k]))
 print("  model:scaffold ratio = %.2fx" % (shap_c["model"] / shap_c["scaffold"]))
 
+# Cleanest model-vs-scaffold comparison: each factor entered LAST, i.e. net of
+# price + benchmark AND the other factor (semipartial / unique contribution).
+# as_pb = adjR2(price+benchmark+scaffold); am_pb = adjR2(price+benchmark+model).
+both_adj = fit("logit_acc ~ log_cost + C(benchmark) + C(model_norm) + C(scaffold)", d)["adj_r2"]
+uniq_scaffold = both_adj - am_pb     # scaffold added last
+uniq_model = both_adj - as_pb        # model added last
+print("\nUnique contribution, each added LAST (net of price + benchmark + other), "
+      "full adjR2=%.3f:" % both_adj)
+print("  scaffold  %+.3f" % uniq_scaffold)
+print("  model     %+.3f   -> scaffold/model = %.2fx" % (uniq_model, uniq_scaffold / uniq_model))
+
 # Persist covariate results.
 cov = pd.DataFrame(
     [
@@ -334,6 +345,9 @@ cov = pd.DataFrame(
         ("logit_acc ~ log_cost + benchmark", b_pb, np.nan),
         ("  + scaffold", as_pb, inc_s_pb),
         ("  + model", am_pb, inc_m_pb),
+        ("full (price+benchmark+model+scaffold)", both_adj, np.nan),
+        ("  scaffold unique (added last)", both_adj, uniq_scaffold),
+        ("  model unique (added last)", both_adj, uniq_model),
     ],
     columns=["spec", "adj_r2", "incremental_adj_r2"],
 )
